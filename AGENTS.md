@@ -13,10 +13,10 @@ This version has breaking changes — APIs, conventions, and file structure may 
 | フレームワーク | Next.js 16.2.1（App Router） + TypeScript                                         |
 | UI             | Mantine v8（@mantine/core, hooks, form, charts, dates, notifications）            |
 | グラフ         | @mantine/charts（Recharts ベース）                                                |
-| 認証           | Auth0（メール/パスワード + Google）                                               |
+| 認証           | Auth0 v4（メール/パスワード + Google）、`proxy.ts` パターン                       |
 | DB             | Prisma Postgres + Prisma ORM v6                                                   |
 | AI連携         | アダプターパターンで抽象化（MVP はモック実装、後から Gemini/Claude に差し替え可） |
-| PWA            | Next.js 組み込みマニフェスト（`app/manifest.ts`）+ Service Worker                 |
+| PWA            | Next.js 組み込みマニフェスト（`app/manifest.ts`）+ `@serwist/next`                |
 
 ---
 
@@ -58,12 +58,13 @@ This version has breaking changes — APIs, conventions, and file structure may 
 - 食事内容の場合は栄養分析結果カードとして表示
 
 #### チャット履歴（中央エリア）
-- 当日の入力履歴をタイムライン形式で表示（LINE 風チャット UI）
+- 当日の入力履歴をタイムライン形式で表示（LINE 風チャット UI）、最新 20 件を取得・表示
 - 各入力に対し、AI の解析結果カードを返答として表示
   - 食品名・数量・カロリー・タンパク質・脂質・炭水化物（g）
   - AI の推定信頼度（高 / 中 / 低）
   - 補足コメント（例：「ラーメンは種類により大きく異なります」）
-- 記録の削除が可能
+- 食事・体重と無関係な内容が入力された場合は AI を呼び出さず定型文を返却
+- チャットからは記録の追加のみ可能（編集・削除はホーム画面のサマリーエリアまたは履歴画面で行う）
 
 #### 当日サマリー（上部）
 - 総摂取カロリー（kcal）
@@ -78,10 +79,9 @@ This version has breaking changes — APIs, conventions, and file structure may 
 
 **目的**: 過去の食事記録の確認
 
-- カレンダーで日付を選択すると、その日の記録一覧を表示
-- 1 日分の食事記録（入力テキスト + 解析結果）をリスト表示
-- 当日の摂取カロリー合計・PFC 合計を表示
-- 記録の削除が可能
+- 日付ごとにグループ化した食事記録をリスト表示（日付選択なしで一覧を確認できる）
+- 各日のグループには摂取カロリー合計・PFC 合計をサマリーとして表示
+- 各記録（入力テキスト + 解析結果）の編集・削除が可能
 
 ---
 
@@ -99,7 +99,7 @@ This version has breaking changes — APIs, conventions, and file structure may 
 
 #### 記録一覧
 - 体重の記録をリスト表示（日付 + 体重）
-- 記録の削除が可能
+- 各記録の編集・削除が可能
 
 ---
 
@@ -124,25 +124,32 @@ This version has breaking changes — APIs, conventions, and file structure may 
 ## AI 連携の仕組み
 
 1. ユーザーがテキストを入力
-2. `POST /api/analyze` へ送信
-3. `AIAdapter.analyzeNutrition(text)` を呼び出し（MVP: モック実装、将来: Gemini / Claude）
-4. `NutritionAnalysis`（食品リスト + 栄養素）を取得
-5. `POST /api/meals` で DB に保存
-6. 解析結果カードを画面に表示
+2. サーバーサイドで食事・体重に関係があるかを簡易判定し、無関係な場合は定型文を返して終了
+3. `POST /api/analyze` へ送信
+4. `AIAdapter.analyzeNutrition(text)` を呼び出し（MVP: モック実装、将来: Gemini / Claude）
+5. `NutritionAnalysis`（食品リスト + 栄養素）を取得
+6. `POST /api/meals` で DB に保存
+7. 解析結果カードを画面に表示
 
 - 環境変数 `AI_PROVIDER=mock|gemini|claude` でアダプターを切り替える設計
 - MVP 段階では常に `mock` を使用（固定データ返却）
+
+### AI リクエスト最適化方針
+
+- LLM へのプロンプトは必要最小限に絞り、レスポンスは JSON のみを返させる（自然言語の説明文は不要）
+- 食事・体重と無関係な入力は LLM に渡す前にサーバー側で弾く（トークン削減）
+- モック実装でも本番と同じ JSON スキーマを返すことで差し替えをスムーズにする
 
 ---
 
 ## 非機能要件（MVP スコープ）
 
-| 項目           | 目標                                                                          |
-| -------------- | ----------------------------------------------------------------------------- |
-| 入力から結果表示まで | 2 秒以内（AI モック時）、実際の AI 利用時は最大 5 秒                    |
-| オフライン対応 | PWA として Service Worker でアセットをキャッシュ（オフライン表示は最低限）    |
-| レスポンシブ   | スマートフォン（375px〜）・デスクトップ両対応（Mantine ブレークポイント準拠） |
-| ダークモード   | Mantine の ColorScheme 機能で自動対応                                         |
+| 項目                 | 目標                                                                          |
+| -------------------- | ----------------------------------------------------------------------------- |
+| 入力から結果表示まで | 2 秒以内（AI モック時）、実際の AI 利用時は最大 5 秒                          |
+| オフライン対応       | PWA として Service Worker でアセットをキャッシュ（オフライン表示は最低限）    |
+| レスポンシブ         | スマートフォン（375px〜）・デスクトップ両対応（Mantine ブレークポイント準拠） |
+| ダークモード         | Mantine の ColorScheme 機能で自動対応                                         |
 
 ---
 
