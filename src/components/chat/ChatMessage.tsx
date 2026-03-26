@@ -1,8 +1,14 @@
 "use client";
 
 import { Badge, Box, Group, Paper, Stack, Table, Text } from "@mantine/core";
-import { IconScale } from "@tabler/icons-react";
-import type { ChatMessage as ChatMessageType } from "@/types";
+import {
+  IconCandy,
+  IconCoffee,
+  IconMoon,
+  IconScale,
+  IconSun,
+} from "@tabler/icons-react";
+import type { ChatMessage as ChatMessageType, MealCategory } from "@/types";
 
 const CONFIDENCE_BADGE = {
   high: { label: "高", color: "green" },
@@ -10,11 +16,22 @@ const CONFIDENCE_BADGE = {
   low: { label: "低", color: "red" },
 } as const;
 
-function formatTime(date: Date): string {
-  return date.toLocaleTimeString("ja-JP", {
-    hour: "2-digit",
-    minute: "2-digit",
-  });
+const CATEGORY_COLOR: Record<MealCategory, string> = {
+  朝食: "orange",
+  昼食: "blue",
+  夕食: "violet",
+  間食: "gray",
+};
+
+function getCategoryIcon(category: MealCategory) {
+  const icons = {
+    朝食: IconCoffee,
+    昼食: IconSun,
+    夕食: IconMoon,
+    間食: IconCandy,
+  };
+  const Icon = icons[category];
+  return <Icon size={10} />;
 }
 
 interface ChatMessageProps {
@@ -27,9 +44,16 @@ export function ChatMessage({ message }: ChatMessageProps) {
       {/* ユーザー入力 */}
       <Group justify="flex-end">
         <Stack gap={2} align="flex-end" maw="75%">
-          <Text size="xs" c="dimmed">
-            {formatTime(message.createdAt)}
-          </Text>
+          {message.type === "meal" && message.mealCategory && (
+            <Badge
+              size="xs"
+              color={CATEGORY_COLOR[message.mealCategory]}
+              variant="light"
+              leftSection={getCategoryIcon(message.mealCategory)}
+            >
+              {message.mealCategory}
+            </Badge>
+          )}
           <Paper
             px="md"
             py="xs"

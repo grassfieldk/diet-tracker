@@ -111,9 +111,10 @@ This version has breaking changes — APIs, conventions, and file structure may 
 
 ### MealRecord（食事記録）
 - ユーザーが入力したテキスト（rawText）
+- 食事区分（朝食 / 昼食 / 夕食 / 間食）— テキストのキーワードから自動判定
 - AI が解析した食品リストと栄養素（JSON）
 - 合計カロリー / タンパク質 / 脂質 / 炭水化物
-- 記録日時
+- 記録日付（日付のみ保持、時刻は不要）
 
 ### WeightRecord（体重記録）
 - 体重（kg）

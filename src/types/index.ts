@@ -19,13 +19,25 @@ export interface NutritionAnalysis {
 
 export type MessageType = "meal" | "weight" | "off-topic";
 
+export type MealCategory = "朝食" | "昼食" | "夕食" | "間食";
+
 export interface ChatMessage {
   id: string;
   rawText: string;
   type: MessageType;
   createdAt: Date;
+  mealCategory?: MealCategory;
   analysis?: NutritionAnalysis;
   weightKg?: number;
+}
+
+/** 履歴画面で扱う食事記録 */
+export interface MealRecord {
+  id: string;
+  rawText: string;
+  mealCategory: MealCategory;
+  analysis: NutritionAnalysis;
+  recordedAt: Date;
 }
 
 export type Sex = "male" | "female";
