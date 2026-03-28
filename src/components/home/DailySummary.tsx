@@ -1,21 +1,105 @@
 "use client";
 
-import { DonutChart } from "@mantine/charts";
-import { Anchor, Badge, Group, Paper, Stack, Text, Title } from "@mantine/core";
-import { useEffect, useState } from "react";
+import { Anchor, Box, Group, Paper, Stack, Text, Tooltip } from "@mantine/core";
+import { PfcBar } from "@/components/common/PfcBar";
 import type { ChatMessage, UserProfile } from "@/types";
+
+interface BmrBarProps {
+  consumed: number;
+  bmr: number;
+}
+
+function BmrBar({ consumed, bmr }: BmrBarProps) {
+  // バー全体を bmr*1.5 の範囲とし、bmr位置にマーカーを置く
+  const MAX = bmr * 1.5;
+  const normalPct = Math.min((consumed / MAX) * 100, (bmr / MAX) * 100);
+  const overPct =
+    consumed > bmr
+      ? Math.min(((consumed - bmr) / MAX) * 100, 100 - (bmr / MAX) * 100)
+      : 0;
+  const markerPct = (bmr / MAX) * 100;
+  const diff = Math.round(consumed - bmr);
+  const over = diff > 0;
+
+  return (
+    <Box style={{ width: "100%" }}>
+      <Group justify="space-between" mb={2}>
+        <Text size="xs" c="dimmed">
+          BMR {bmr.toLocaleString()} kcal
+        </Text>
+        <Text size="xs" fw={600} c={over ? "orange.7" : "blue.6"}>
+          {over ? "+" : ""}
+          {diff.toLocaleString()} kcal
+        </Text>
+      </Group>
+      <Tooltip
+        label={`${consumed.toLocaleString()} / ${bmr.toLocaleString()} kcal`}
+        position="bottom"
+      >
+        <Box
+          style={{
+            position: "relative",
+            height: 16,
+            borderRadius: 8,
+            background: "var(--mantine-color-default-border)",
+            overflow: "visible",
+          }}
+        >
+          {/* 通常摂取バー */}
+          <Box
+            style={{
+              position: "absolute",
+              left: 0,
+              top: 0,
+              height: "100%",
+              width: `${normalPct}%`,
+              borderRadius: 8,
+              background: over
+                ? "var(--mantine-color-orange-5)"
+                : "var(--mantine-color-blue-5)",
+              transition: "width 0.3s ease",
+            }}
+          />
+          {/* 超過バー */}
+          {overPct > 0 && (
+            <Box
+              style={{
+                position: "absolute",
+                left: `${markerPct}%`,
+                top: 0,
+                height: "100%",
+                width: `${overPct}%`,
+                borderTopRightRadius: 7,
+                borderBottomRightRadius: 7,
+                background: "var(--mantine-color-red-6)",
+                transition: "width 0.3s ease",
+              }}
+            />
+          )}
+          {/* BMR マーカー */}
+          <Box
+            style={{
+              position: "absolute",
+              left: `${markerPct}%`,
+              top: 0,
+              transform: "translateX(-50%)",
+              width: 2,
+              height: 16,
+              borderRadius: 1,
+              background: "var(--mantine-color-default-color)",
+            }}
+          />
+        </Box>
+      </Tooltip>
+    </Box>
+  );
+}
 
 interface DailySummaryProps {
   messages: ChatMessage[];
   profile: UserProfile | null;
   onSetupClick: () => void;
 }
-
-const PFC_COLORS = {
-  protein: "blue.6",
-  fat: "orange.5",
-  carbs: "green.6",
-} as const;
 
 export function DailySummary({
   messages,
@@ -41,49 +125,24 @@ export function DailySummary({
     0,
   );
 
-  const pfcData = [
-    {
-      name: "タンパク質",
-      value: Math.round(totalProtein * 10) / 10,
-      color: PFC_COLORS.protein,
-    },
-    {
-      name: "脂質",
-      value: Math.round(totalFat * 10) / 10,
-      color: PFC_COLORS.fat,
-    },
-    {
-      name: "炭水化物",
-      value: Math.round(totalCarbs * 10) / 10,
-      color: PFC_COLORS.carbs,
-    },
-  ];
-
   const bmrDiff = profile ? Math.round(totalCalories - profile.bmr) : null;
-
-  const [mounted, setMounted] = useState(false);
-  useEffect(() => setMounted(true), []);
 
   return (
     <Paper p="md" withBorder radius="md">
       <Group align="flex-start" justify="space-between" wrap="nowrap" gap="md">
         <Stack gap={4} style={{ minWidth: 0, flex: 1 }}>
-          <Text size="xs" c="dimmed">
-            本日の摂取カロリー
-          </Text>
-          <Group align="baseline" gap={4}>
-            <Title order={2}>{totalCalories.toLocaleString()}</Title>
-            <Text size="sm" c="dimmed">
-              kcal
-            </Text>
+          <Group align="baseline" justify="space-between" gap={4}>
+            <Text size="xs">今日の摂取カロリー</Text>
+            <Group align="baseline" gap={4}>
+              <Text size="xl" fw={600}>
+                {totalCalories.toLocaleString()}
+              </Text>
+              <Text size="sm">kcal</Text>
+            </Group>
           </Group>
 
           {profile !== null && bmrDiff !== null && (
-            <Text size="xs" c={bmrDiff > 0 ? "orange.7" : "blue.6"}>
-              基礎代謝 {profile.bmr.toLocaleString()} kcal との差:{" "}
-              {bmrDiff > 0 ? "+" : ""}
-              {bmrDiff.toLocaleString()} kcal
-            </Text>
+            <BmrBar consumed={totalCalories} bmr={profile.bmr} />
           )}
 
           {profile === null && (
@@ -95,36 +154,12 @@ export function DailySummary({
               BMR を設定する
             </Anchor>
           )}
-
-          <Group gap={8} mt={4}>
-            {pfcData.map((d) => (
-              <Group key={d.name} gap={2}>
-                <Badge
-                  size="xs"
-                  color={d.color}
-                  variant="dot"
-                  style={{ paddingLeft: 0 }}
-                >
-                  {d.name}
-                </Badge>
-                <Text size="xs">{d.value}g</Text>
-              </Group>
-            ))}
-          </Group>
         </Stack>
-
-        {mounted && totalCalories > 0 && (
-          <DonutChart
-            data={pfcData}
-            size={88}
-            thickness={16}
-            withTooltip
-            tooltipDataSource="segment"
-            chartLabel={`${totalCalories}`}
-            valueFormatter={(v) => `${v}g`}
-          />
-        )}
       </Group>
+
+      <Box mt={8}>
+        <PfcBar protein={totalProtein} fat={totalFat} carbs={totalCarbs} />
+      </Box>
     </Paper>
   );
 }

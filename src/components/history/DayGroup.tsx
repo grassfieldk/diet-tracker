@@ -22,6 +22,7 @@ import {
   IconSun,
   IconTrash,
 } from "@tabler/icons-react";
+import { PfcBar } from "@/components/common/PfcBar";
 import type { MealCategory, MealRecord } from "@/types";
 
 const CATEGORY_COLOR: Record<MealCategory, string> = {
@@ -40,60 +41,6 @@ function getCategoryIcon(category: MealCategory) {
   };
   const Icon = icons[category];
   return <Icon size={10} />;
-}
-
-interface PfcBarProps {
-  protein: number;
-  fat: number;
-  carbs: number;
-}
-
-function PfcBar({ protein, fat, carbs }: PfcBarProps) {
-  const total = protein + fat + carbs;
-  if (total === 0) return null;
-  const pPct = Math.round((protein / total) * 100);
-  const fPct = Math.round((fat / total) * 100);
-  const cPct = 100 - pPct - fPct;
-
-  const segments = [
-    { label: "P", pct: pPct, color: "var(--mantine-color-blue-6)" },
-    { label: "F", pct: fPct, color: "var(--mantine-color-orange-5)" },
-    { label: "C", pct: cPct, color: "var(--mantine-color-green-6)" },
-  ];
-
-  return (
-    <Box
-      style={{
-        display: "flex",
-        width: "100%",
-        height: 18,
-        borderRadius: 4,
-        overflow: "hidden",
-      }}
-    >
-      {segments.map(({ label, pct, color }) =>
-        pct > 0 ? (
-          <Box
-            key={label}
-            style={{
-              width: `${pct}%`,
-              background: color,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              fontSize: 10,
-              color: "#fff",
-              fontWeight: 600,
-              overflow: "hidden",
-              whiteSpace: "nowrap",
-            }}
-          >
-            {pct >= 12 ? `${label} ${pct}%` : pct >= 6 ? `${pct}%` : ""}
-          </Box>
-        ) : null,
-      )}
-    </Box>
-  );
 }
 
 interface MealRecordRowProps {
@@ -280,14 +227,12 @@ export function DayGroup({
         py="xs"
         radius="sm"
       >
-        <Group justify="space-between" wrap="wrap" gap={4}>
+        <Group justify="center" wrap="wrap" gap={4}>
           <Text fw={600} size="sm">
             {dateLabel}
           </Text>
           <Group gap={12}>
-            <Text size="sm" fw={600}>
-              {totalCalories.toLocaleString()} kcal
-            </Text>
+            <Text size="sm">{totalCalories.toLocaleString()} kcal</Text>
             <Text size="xs" c="dimmed">
               P {Math.round(totalProtein * 10) / 10}g　F{" "}
               {Math.round(totalFat * 10) / 10}g　C{" "}
