@@ -1,0 +1,63 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model User {
+  id        String   @id // Auth0 の sub (例: "auth0|xxx")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // プロフィール
+  height Float? // cm
+  weight Float? // kg（最新体重。WeightRecord とは別途保持）
+  age    Int?
+  gender String? // "male" | "female" | "other"
+  bmr    Float? // 計算済み基礎代謝 (kcal)
+
+  mealRecords   MealRecord[]
+  weightRecords WeightRecord[]
+}
+
+model MealRecord {
+  id           String   @id @default(cuid())
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  recordedDate DateTime @db.Date // 日付のみ（時刻なし）
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  mealCategory String // "朝食" | "昼食" | "夕食" | "間食"
+
+  // AI 解析結果（JSON で保存）
+  analysisJson   Json
+  totalCalories  Float
+  totalProtein   Float
+  totalFat       Float
+  totalCarbs     Float
+
+  @@index([userId, recordedDate])
+}
+
+model WeightRecord {
+  id         String   @id @default(cuid())
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  recordedAt DateTime @default(now()) // 記録日時
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  weight Float // kg
+
+  @@index([userId, recordedAt])
+}
