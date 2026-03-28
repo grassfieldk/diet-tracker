@@ -98,21 +98,41 @@ function PfcBar({ protein, fat, carbs }: PfcBarProps) {
 
 interface MealRecordRowProps {
   record: MealRecord;
+  position: "first" | "middle" | "last" | "only";
   onEdit: (record: MealRecord) => void;
   onDelete: (id: string) => void;
 }
 
-function MealRecordRow({ record, onEdit, onDelete }: MealRecordRowProps) {
+function MealRecordRow({
+  record,
+  position,
+  onEdit,
+  onDelete,
+}: MealRecordRowProps) {
   const [expanded, { toggle }] = useDisclosure(false);
   const { analysis } = record;
+
+  const topRadius = position === "first" || position === "only" ? "sm" : 0;
+  const bottomRadius = position === "last" || position === "only" ? "sm" : 0;
 
   return (
     <Paper
       withBorder
-      radius="sm"
+      radius={0}
       p="sm"
       onClick={toggle}
-      style={{ cursor: "pointer" }}
+      style={{
+        cursor: "pointer",
+        borderTopLeftRadius:
+          topRadius === "sm" ? "var(--mantine-radius-sm)" : 0,
+        borderTopRightRadius:
+          topRadius === "sm" ? "var(--mantine-radius-sm)" : 0,
+        borderBottomLeftRadius:
+          bottomRadius === "sm" ? "var(--mantine-radius-sm)" : 0,
+        borderBottomRightRadius:
+          bottomRadius === "sm" ? "var(--mantine-radius-sm)" : 0,
+        marginTop: position === "first" || position === "only" ? 0 : -1,
+      }}
     >
       <Stack gap={6}>
         <Group justify="space-between" wrap="nowrap">
@@ -276,15 +296,26 @@ export function DayGroup({
           </Group>
         </Group>
       </Paper>
-      <Stack gap="xs">
-        {records.map((record) => (
-          <MealRecordRow
-            key={record.id}
-            record={record}
-            onEdit={onEdit}
-            onDelete={onDelete}
-          />
-        ))}
+      <Stack gap={0}>
+        {records.map((record, i) => {
+          const position =
+            records.length === 1
+              ? "only"
+              : i === 0
+                ? "first"
+                : i === records.length - 1
+                  ? "last"
+                  : "middle";
+          return (
+            <MealRecordRow
+              key={record.id}
+              record={record}
+              position={position}
+              onEdit={onEdit}
+              onDelete={onDelete}
+            />
+          );
+        })}
       </Stack>
     </Stack>
   );
