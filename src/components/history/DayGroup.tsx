@@ -42,6 +42,60 @@ function getCategoryIcon(category: MealCategory) {
   return <Icon size={10} />;
 }
 
+interface PfcBarProps {
+  protein: number;
+  fat: number;
+  carbs: number;
+}
+
+function PfcBar({ protein, fat, carbs }: PfcBarProps) {
+  const total = protein + fat + carbs;
+  if (total === 0) return null;
+  const pPct = Math.round((protein / total) * 100);
+  const fPct = Math.round((fat / total) * 100);
+  const cPct = 100 - pPct - fPct;
+
+  const segments = [
+    { label: "P", pct: pPct, color: "var(--mantine-color-blue-6)" },
+    { label: "F", pct: fPct, color: "var(--mantine-color-orange-5)" },
+    { label: "C", pct: cPct, color: "var(--mantine-color-green-6)" },
+  ];
+
+  return (
+    <Box
+      style={{
+        display: "flex",
+        width: "100%",
+        height: 18,
+        borderRadius: 4,
+        overflow: "hidden",
+      }}
+    >
+      {segments.map(({ label, pct, color }) =>
+        pct > 0 ? (
+          <Box
+            key={label}
+            style={{
+              width: `${pct}%`,
+              background: color,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              fontSize: 10,
+              color: "#fff",
+              fontWeight: 600,
+              overflow: "hidden",
+              whiteSpace: "nowrap",
+            }}
+          >
+            {pct >= 12 ? `${label} ${pct}%` : pct >= 6 ? `${pct}%` : ""}
+          </Box>
+        ) : null,
+      )}
+    </Box>
+  );
+}
+
 interface MealRecordRowProps {
   record: MealRecord;
   onEdit: (record: MealRecord) => void;
@@ -111,37 +165,45 @@ function MealRecordRow({ record, onEdit, onDelete }: MealRecordRowProps) {
         <Box
           style={{
             display: "grid",
-            gridTemplateColumns: "4em 4em 4em 4em",
+            gridTemplateColumns: "4em 1fr",
             alignItems: "center",
-            // textAlign: "right",
-            gap: "0 4px",
+            gap: "0 8px",
           }}
         >
           <Text size="xs" fw={600} ta="right">
             {analysis.totalCalories.toLocaleString()} kcal
           </Text>
-          <Text size="xs" c="dimmed" ta="right">
-            P: {analysis.totalProtein}g
-          </Text>
-          <Text size="xs" c="dimmed" ta="right">
-            F: {analysis.totalFat}g
-          </Text>
-          <Text size="xs" c="dimmed" ta="right">
-            C: {analysis.totalCarbs}g
-          </Text>
+          <PfcBar
+            protein={analysis.totalProtein}
+            fat={analysis.totalFat}
+            carbs={analysis.totalCarbs}
+          />
         </Box>
 
         <Collapse in={expanded}>
           <Box pt={4}>
             <Table fz="xs" verticalSpacing={2} withColumnBorders={false}>
               <Table.Thead>
-                <Table.Tr>
+                <Table.Tr
+                  style={{
+                    borderBottom:
+                      "2px solid var(--mantine-color-default-border)",
+                  }}
+                >
                   <Table.Th>食品</Table.Th>
                   <Table.Th>量</Table.Th>
                   <Table.Th ta="right">kcal</Table.Th>
                   <Table.Th ta="right">P(g)</Table.Th>
                   <Table.Th ta="right">F(g)</Table.Th>
                   <Table.Th ta="right">C(g)</Table.Th>
+                </Table.Tr>
+                <Table.Tr fw={600}>
+                  <Table.Td>合計</Table.Td>
+                  <Table.Td />
+                  <Table.Td ta="right">{analysis.totalCalories}</Table.Td>
+                  <Table.Td ta="right">{analysis.totalProtein}</Table.Td>
+                  <Table.Td ta="right">{analysis.totalFat}</Table.Td>
+                  <Table.Td ta="right">{analysis.totalCarbs}</Table.Td>
                 </Table.Tr>
               </Table.Thead>
               <Table.Tbody>
