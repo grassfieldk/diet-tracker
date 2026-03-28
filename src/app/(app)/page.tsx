@@ -42,7 +42,7 @@ export default function HomePage() {
           profile={profile}
           onSetupClick={open}
         />
-        <ScrollArea style={{ flex: 1, minHeight: 0 }}>
+        <ScrollArea style={{ flex: 1, minHeight: 0 }} scrollbars="y">
           <ChatHistory messages={messages} />
           <div ref={bottomRef} />
         </ScrollArea>

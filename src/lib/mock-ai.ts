@@ -60,8 +60,6 @@ function mockAnalyzeNutrition(text: string): NutritionAnalysis {
     totalProtein: 15.0,
     totalFat: 10.0,
     totalCarbs: 50.0,
-    confidence: "low",
-    notes: "詳細な情報が少ないため推定精度が低くなっています",
   };
 }
 

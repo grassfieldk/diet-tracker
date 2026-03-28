@@ -43,9 +43,19 @@ export default function HistoryPage() {
     setRecords((prev) => prev.filter((r) => r.id !== id));
   };
 
-  const handleSave = (id: string, rawText: string) => {
+  const handleSave = (
+    id: string,
+    values: {
+      totalCalories: number;
+      totalProtein: number;
+      totalFat: number;
+      totalCarbs: number;
+    },
+  ) => {
     setRecords((prev) =>
-      prev.map((r) => (r.id === id ? { ...r, rawText } : r)),
+      prev.map((r) =>
+        r.id === id ? { ...r, analysis: { ...r.analysis, ...values } } : r,
+      ),
     );
   };
 

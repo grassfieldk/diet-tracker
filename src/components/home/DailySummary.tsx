@@ -2,6 +2,7 @@
 
 import { DonutChart } from "@mantine/charts";
 import { Anchor, Badge, Group, Paper, Stack, Text, Title } from "@mantine/core";
+import { useEffect, useState } from "react";
 import type { ChatMessage, UserProfile } from "@/types";
 
 interface DailySummaryProps {
@@ -60,6 +61,9 @@ export function DailySummary({
 
   const bmrDiff = profile ? Math.round(totalCalories - profile.bmr) : null;
 
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+
   return (
     <Paper p="md" withBorder radius="md">
       <Group align="flex-start" justify="space-between" wrap="nowrap" gap="md">
@@ -109,7 +113,7 @@ export function DailySummary({
           </Group>
         </Stack>
 
-        {totalCalories > 0 && (
+        {mounted && totalCalories > 0 && (
           <DonutChart
             data={pfcData}
             size={88}

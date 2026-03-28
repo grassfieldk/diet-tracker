@@ -30,7 +30,6 @@ export const MOCK_CHAT_MESSAGES: ChatMessage[] = [
       totalProtein: 10.4,
       totalFat: 5.0,
       totalCarbs: 61.1,
-      confidence: "high",
     },
   },
   {
@@ -69,7 +68,6 @@ export const MOCK_CHAT_MESSAGES: ChatMessage[] = [
       totalProtein: 22.4,
       totalFat: 20.0,
       totalCarbs: 75.0,
-      confidence: "medium",
       notes: "ラーメンは種類により大きく異なります",
     },
   },
@@ -94,7 +92,6 @@ export const MOCK_MEAL_RECORDS: MealRecord[] = [
   // 3日前
   {
     id: "h1",
-    rawText: "朝 トースト バター コーヒー",
     mealCategory: "朝食",
     recordedAt: daysAgo(3),
     analysis: {
@@ -128,12 +125,10 @@ export const MOCK_MEAL_RECORDS: MealRecord[] = [
       totalProtein: 11.7,
       totalFat: 12.6,
       totalCarbs: 59.5,
-      confidence: "high",
     },
   },
   {
     id: "h2",
-    rawText: "昼 牛丼 みそ汁",
     mealCategory: "昼食",
     recordedAt: daysAgo(3),
     analysis: {
@@ -159,12 +154,10 @@ export const MOCK_MEAL_RECORDS: MealRecord[] = [
       totalProtein: 24.5,
       totalFat: 18.2,
       totalCarbs: 97.9,
-      confidence: "medium",
     },
   },
   {
     id: "h3",
-    rawText: "夜 焼き魚 ご飯 豆腐の味噌汁",
     mealCategory: "夕食",
     recordedAt: daysAgo(3),
     analysis: {
@@ -198,13 +191,11 @@ export const MOCK_MEAL_RECORDS: MealRecord[] = [
       totalProtein: 28.2,
       totalFat: 14.6,
       totalCarbs: 60.3,
-      confidence: "high",
     },
   },
   // 2日前
   {
     id: "h4",
-    rawText: "朝 ヨーグルト バナナ",
     mealCategory: "朝食",
     recordedAt: daysAgo(2),
     analysis: {
@@ -230,12 +221,10 @@ export const MOCK_MEAL_RECORDS: MealRecord[] = [
       totalProtein: 4.7,
       totalFat: 3.2,
       totalCarbs: 27.4,
-      confidence: "high",
     },
   },
   {
     id: "h5",
-    rawText: "昼 カレーライス",
     mealCategory: "昼食",
     recordedAt: daysAgo(2),
     analysis: {
@@ -253,13 +242,11 @@ export const MOCK_MEAL_RECORDS: MealRecord[] = [
       totalProtein: 18.5,
       totalFat: 20.4,
       totalCarbs: 118.4,
-      confidence: "medium",
       notes: "カレーのルーや具材により大きく変動します",
     },
   },
   {
     id: "h6",
-    rawText: "夜 唐揚げ ビール350ml サラダ",
     mealCategory: "夕食",
     recordedAt: daysAgo(2),
     analysis: {
@@ -293,13 +280,11 @@ export const MOCK_MEAL_RECORDS: MealRecord[] = [
       totalProtein: 26.8,
       totalFat: 22.4,
       totalCarbs: 29.0,
-      confidence: "medium",
     },
   },
   // 昨日
   {
     id: "h7",
-    rawText: "朝 ご飯 納豆 卵焼き",
     mealCategory: "朝食",
     recordedAt: daysAgo(1),
     analysis: {
@@ -333,12 +318,10 @@ export const MOCK_MEAL_RECORDS: MealRecord[] = [
       totalProtein: 19.0,
       totalFat: 14.0,
       totalCarbs: 63.1,
-      confidence: "high",
     },
   },
   {
     id: "h8",
-    rawText: "昼 コンビニ おにぎり2個 サラダチキン",
     mealCategory: "昼食",
     recordedAt: daysAgo(1),
     analysis: {
@@ -372,12 +355,10 @@ export const MOCK_MEAL_RECORDS: MealRecord[] = [
       totalProtein: 34.6,
       totalFat: 5.6,
       totalCarbs: 75.6,
-      confidence: "high",
     },
   },
   {
     id: "h9",
-    rawText: "夜 パスタ ミートソース",
     mealCategory: "夕食",
     recordedAt: daysAgo(1),
     analysis: {
@@ -395,7 +376,6 @@ export const MOCK_MEAL_RECORDS: MealRecord[] = [
       totalProtein: 22.0,
       totalFat: 14.0,
       totalCarbs: 78.0,
-      confidence: "medium",
     },
   },
 ];

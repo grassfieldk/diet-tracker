@@ -1,38 +1,8 @@
 "use client";
 
-import { Badge, Box, Group, Paper, Stack, Table, Text } from "@mantine/core";
-import {
-  IconCandy,
-  IconCoffee,
-  IconMoon,
-  IconScale,
-  IconSun,
-} from "@tabler/icons-react";
-import type { ChatMessage as ChatMessageType, MealCategory } from "@/types";
-
-const CONFIDENCE_BADGE = {
-  high: { label: "高", color: "green" },
-  medium: { label: "中", color: "yellow" },
-  low: { label: "低", color: "red" },
-} as const;
-
-const CATEGORY_COLOR: Record<MealCategory, string> = {
-  朝食: "orange",
-  昼食: "blue",
-  夕食: "violet",
-  間食: "gray",
-};
-
-function getCategoryIcon(category: MealCategory) {
-  const icons = {
-    朝食: IconCoffee,
-    昼食: IconSun,
-    夕食: IconMoon,
-    間食: IconCandy,
-  };
-  const Icon = icons[category];
-  return <Icon size={10} />;
-}
+import { Box, Group, Paper, Stack, Table, Text } from "@mantine/core";
+import { IconScale } from "@tabler/icons-react";
+import type { ChatMessage as ChatMessageType } from "@/types";
 
 interface ChatMessageProps {
   message: ChatMessageType;
@@ -44,16 +14,6 @@ export function ChatMessage({ message }: ChatMessageProps) {
       {/* ユーザー入力 */}
       <Group justify="flex-end">
         <Stack gap={2} align="flex-end" maw="75%">
-          {message.type === "meal" && message.mealCategory && (
-            <Badge
-              size="xs"
-              color={CATEGORY_COLOR[message.mealCategory]}
-              variant="light"
-              leftSection={getCategoryIcon(message.mealCategory)}
-            >
-              {message.mealCategory}
-            </Badge>
-          )}
           <Paper
             px="md"
             py="xs"
@@ -73,8 +33,8 @@ export function ChatMessage({ message }: ChatMessageProps) {
       </Group>
 
       {/* AI 返答 */}
-      <Group justify="flex-start">
-        <Box maw="90%">
+      <Group justify="flex-start" style={{ minWidth: 0, overflow: "hidden" }}>
+        <Box maw="90%" style={{ minWidth: 0, overflow: "hidden" }}>
           {message.type === "meal" && message.analysis && (
             <Paper
               p="sm"
@@ -83,43 +43,36 @@ export function ChatMessage({ message }: ChatMessageProps) {
               style={{ borderTopLeftRadius: 4 }}
             >
               <Stack gap={8}>
-                <Group justify="space-between" align="center">
-                  <Text size="sm" fw={600}>
-                    合計 {message.analysis.totalCalories.toLocaleString()} kcal
-                  </Text>
-                  <Badge
-                    size="xs"
-                    color={CONFIDENCE_BADGE[message.analysis.confidence].color}
-                  >
-                    推定精度:{" "}
-                    {CONFIDENCE_BADGE[message.analysis.confidence].label}
-                  </Badge>
-                </Group>
+                <Text size="sm" fw={600}>
+                  合計 {message.analysis.totalCalories.toLocaleString()} kcal
+                </Text>
 
-                <Table verticalSpacing={2} fz="xs" withColumnBorders={false}>
-                  <Table.Thead>
-                    <Table.Tr>
-                      <Table.Th>食品</Table.Th>
-                      <Table.Th>量</Table.Th>
-                      <Table.Th ta="right">kcal</Table.Th>
-                      <Table.Th ta="right">P(g)</Table.Th>
-                      <Table.Th ta="right">F(g)</Table.Th>
-                      <Table.Th ta="right">C(g)</Table.Th>
-                    </Table.Tr>
-                  </Table.Thead>
-                  <Table.Tbody>
-                    {message.analysis.foods.map((food, i) => (
-                      <Table.Tr key={`${food.name}-${i}`}>
-                        <Table.Td>{food.name}</Table.Td>
-                        <Table.Td>{food.quantity}</Table.Td>
-                        <Table.Td ta="right">{food.calories}</Table.Td>
-                        <Table.Td ta="right">{food.protein}</Table.Td>
-                        <Table.Td ta="right">{food.fat}</Table.Td>
-                        <Table.Td ta="right">{food.carbs}</Table.Td>
+                <Box style={{ overflowX: "auto" }}>
+                  <Table verticalSpacing={2} fz="xs" withColumnBorders={false}>
+                    <Table.Thead>
+                      <Table.Tr>
+                        <Table.Th>食品</Table.Th>
+                        <Table.Th>量</Table.Th>
+                        <Table.Th ta="right">kcal</Table.Th>
+                        <Table.Th ta="right">P(g)</Table.Th>
+                        <Table.Th ta="right">F(g)</Table.Th>
+                        <Table.Th ta="right">C(g)</Table.Th>
                       </Table.Tr>
-                    ))}
-                  </Table.Tbody>
-                </Table>
+                    </Table.Thead>
+                    <Table.Tbody>
+                      {message.analysis.foods.map((food, i) => (
+                        <Table.Tr key={`${food.name}-${i}`}>
+                          <Table.Td>{food.name}</Table.Td>
+                          <Table.Td>{food.quantity}</Table.Td>
+                          <Table.Td ta="right">{food.calories}</Table.Td>
+                          <Table.Td ta="right">{food.protein}</Table.Td>
+                          <Table.Td ta="right">{food.fat}</Table.Td>
+                          <Table.Td ta="right">{food.carbs}</Table.Td>
+                        </Table.Tr>
+                      ))}
+                    </Table.Tbody>
+                  </Table>
+                </Box>
 
                 {message.analysis.notes && (
                   <Text size="xs" c="dimmed">

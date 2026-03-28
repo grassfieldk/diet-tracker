@@ -1,35 +1,32 @@
 "use client";
 
-import {
-  Button,
-  Group,
-  Modal,
-  NumberInput,
-  Stack,
-  Textarea,
-} from "@mantine/core";
+import { Button, Group, Modal, NumberInput, Stack } from "@mantine/core";
 import { useForm } from "@mantine/form";
 import { useEffect } from "react";
 import type { MealRecord } from "@/types";
 
+interface NutritionValues {
+  totalCalories: number;
+  totalProtein: number;
+  totalFat: number;
+  totalCarbs: number;
+}
+
 interface MealEditModalProps {
   record: MealRecord | null;
   onClose: () => void;
-  onSave: (id: string, rawText: string) => void;
+  onSave: (id: string, values: NutritionValues) => void;
 }
 
 export function MealEditModal({ record, onClose, onSave }: MealEditModalProps) {
   const form = useForm({
     initialValues: {
-      rawText: record?.rawText ?? "",
       totalCalories: record?.analysis.totalCalories ?? 0,
       totalProtein: record?.analysis.totalProtein ?? 0,
       totalFat: record?.analysis.totalFat ?? 0,
       totalCarbs: record?.analysis.totalCarbs ?? 0,
     },
     validate: {
-      rawText: (v) =>
-        v.trim().length === 0 ? "入力内容を入力してください" : null,
       totalCalories: (v) => (Number(v) < 0 ? "0以上で入力してください" : null),
     },
   });
@@ -38,7 +35,6 @@ export function MealEditModal({ record, onClose, onSave }: MealEditModalProps) {
   useEffect(() => {
     if (record) {
       form.setValues({
-        rawText: record.rawText,
         totalCalories: record.analysis.totalCalories,
         totalProtein: record.analysis.totalProtein,
         totalFat: record.analysis.totalFat,
@@ -57,17 +53,16 @@ export function MealEditModal({ record, onClose, onSave }: MealEditModalProps) {
       <form
         onSubmit={form.onSubmit((values) => {
           if (!record) return;
-          onSave(record.id, values.rawText.trim());
+          onSave(record.id, {
+            totalCalories: Number(values.totalCalories),
+            totalProtein: Number(values.totalProtein),
+            totalFat: Number(values.totalFat),
+            totalCarbs: Number(values.totalCarbs),
+          });
           onClose();
         })}
       >
         <Stack>
-          <Textarea
-            label="入力内容"
-            autosize
-            minRows={2}
-            {...form.getInputProps("rawText")}
-          />
           <Group grow>
             <NumberInput
               label="カロリー (kcal)"

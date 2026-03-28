@@ -67,6 +67,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             minHeight: 0,
             boxSizing: "border-box",
             overflowY: "auto",
+            overflowX: "hidden",
           }}
         >
           {children}
@@ -139,6 +140,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           minHeight: 0,
           boxSizing: "border-box",
           overflowY: "auto",
+          overflowX: "hidden",
         }}
       >
         {children}

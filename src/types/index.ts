@@ -13,7 +13,6 @@ export interface NutritionAnalysis {
   totalProtein: number;
   totalFat: number;
   totalCarbs: number;
-  confidence: "high" | "medium" | "low";
   notes?: string;
 }
 
@@ -34,7 +33,6 @@ export interface ChatMessage {
 /** 履歴画面で扱う食事記録 */
 export interface MealRecord {
   id: string;
-  rawText: string;
   mealCategory: MealCategory;
   analysis: NutritionAnalysis;
   recordedAt: Date;

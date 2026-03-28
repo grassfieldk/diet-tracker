@@ -24,12 +24,6 @@ import {
 } from "@tabler/icons-react";
 import type { MealCategory, MealRecord } from "@/types";
 
-const CONFIDENCE_BADGE = {
-  high: { label: "高", color: "green" },
-  medium: { label: "中", color: "yellow" },
-  low: { label: "低", color: "red" },
-} as const;
-
 const CATEGORY_COLOR: Record<MealCategory, string> = {
   朝食: "orange",
   昼食: "blue",
@@ -59,7 +53,13 @@ function MealRecordRow({ record, onEdit, onDelete }: MealRecordRowProps) {
   const { analysis } = record;
 
   return (
-    <Paper withBorder radius="sm" p="sm">
+    <Paper
+      withBorder
+      radius="sm"
+      p="sm"
+      onClick={toggle}
+      style={{ cursor: "pointer" }}
+    >
       <Stack gap={6}>
         <Group justify="space-between" wrap="nowrap">
           <Group gap={8} wrap="nowrap" style={{ minWidth: 0 }}>
@@ -73,14 +73,17 @@ function MealRecordRow({ record, onEdit, onDelete }: MealRecordRowProps) {
               {record.mealCategory}
             </Badge>
             <Text size="sm" style={{ wordBreak: "break-word" }}>
-              {record.rawText}
+              {record.analysis.foods.map((f) => f.name).join("、")}
             </Text>
           </Group>
           <Group gap={4} style={{ flexShrink: 0 }}>
             <ActionIcon
               size="sm"
               variant="subtle"
-              onClick={() => onEdit(record)}
+              onClick={(e) => {
+                e.stopPropagation();
+                onEdit(record);
+              }}
               aria-label="編集"
             >
               <IconEdit size={14} />
@@ -89,38 +92,44 @@ function MealRecordRow({ record, onEdit, onDelete }: MealRecordRowProps) {
               size="sm"
               variant="subtle"
               color="red"
-              onClick={() => onDelete(record.id)}
+              onClick={(e) => {
+                e.stopPropagation();
+                onDelete(record.id);
+              }}
               aria-label="削除"
             >
               <IconTrash size={14} />
             </ActionIcon>
-            <ActionIcon
-              size="sm"
-              variant="subtle"
-              onClick={toggle}
-              aria-label="詳細"
-            >
-              {expanded ? (
-                <IconChevronUp size={14} />
-              ) : (
-                <IconChevronDown size={14} />
-              )}
-            </ActionIcon>
+            {expanded ? (
+              <IconChevronUp size={14} style={{ flexShrink: 0 }} />
+            ) : (
+              <IconChevronDown size={14} style={{ flexShrink: 0 }} />
+            )}
           </Group>
         </Group>
 
-        <Group gap={12}>
-          <Text size="xs" fw={600}>
-            {analysis.totalCalories} kcal
+        <Box
+          style={{
+            display: "grid",
+            gridTemplateColumns: "4em 4em 4em 4em",
+            alignItems: "center",
+            // textAlign: "right",
+            gap: "0 4px",
+          }}
+        >
+          <Text size="xs" fw={600} ta="right">
+            {analysis.totalCalories.toLocaleString()} kcal
           </Text>
-          <Text size="xs" c="dimmed">
-            P {analysis.totalProtein}g　F {analysis.totalFat}g　C{" "}
-            {analysis.totalCarbs}g
+          <Text size="xs" c="dimmed" ta="right">
+            P: {analysis.totalProtein}g
           </Text>
-          <Badge size="xs" color={CONFIDENCE_BADGE[analysis.confidence].color}>
-            推定精度: {CONFIDENCE_BADGE[analysis.confidence].label}
-          </Badge>
-        </Group>
+          <Text size="xs" c="dimmed" ta="right">
+            F: {analysis.totalFat}g
+          </Text>
+          <Text size="xs" c="dimmed" ta="right">
+            C: {analysis.totalCarbs}g
+          </Text>
+        </Box>
 
         <Collapse in={expanded}>
           <Box pt={4}>
