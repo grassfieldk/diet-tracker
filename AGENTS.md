@@ -162,3 +162,52 @@ This version has breaking changes — APIs, conventions, and file structure may 
 - コンビニ商品 DB 連携
 - Gemini / Claude の実 API 実装（アダプターの差し替えのみ準備）
 
+---
+
+## セキュリティ要件：ユーザーデータ分離
+
+**全ユーザーデータは Auth0 ユーザーごとに厳格に分離すること。他ユーザーのデータが閲覧・変更・削除されることは絶対に許容されない。**
+
+### DB 設計
+
+- `MealRecord`・`WeightRecord` は必ず `userId`（Auth0 の `sub`）を持つ外部キーで `User` に紐づく
+- `userId` は NOT NULL・外部キー制約・Cascade 削除が設定されており、構造上の混入経路がない
+
+### API Routes の実装ルール
+
+全ての API Route（Route Handler）で以下を必ず守ること：
+
+**1. セッション取得と認証チェック**
+
+```ts
+const session = await auth0.getSession();
+if (!session) {
+  return Response.json({ error: "Unauthorized" }, { status: 401 });
+}
+const userId = session.user.sub; // Auth0 の sub をユーザー識別子として使用
+```
+
+**2. 一覧取得は必ず `userId` でフィルタリング**
+
+```ts
+const records = await prisma.mealRecord.findMany({
+  where: { userId }, // ← 他ユーザーのレコードを絶対に返さない
+});
+```
+
+**3. 更新・削除は `id` と `userId` を AND 条件で指定**
+
+```ts
+// id のみで検索すると他ユーザーのレコードを操作できてしまう
+const record = await prisma.mealRecord.update({
+  where: { id, userId }, // ← 複合条件。自分のものでなければ notFound になる
+  data: { ... },
+});
+```
+
+`userId` を `where` 条件に含めない実装はセキュリティ上の重大な欠陥とみなす。
+
+### proxy.ts による多層防御
+
+未ログインユーザーは `proxy.ts` で `/login` にリダイレクトされるため、API Routes 自体に到達できない。ただしこれは補助的な防御であり、**API Routes 内でのセッション検証・`userId` フィルタリングを省略する理由にはならない**。
+
