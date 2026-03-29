@@ -1,12 +1,12 @@
 "use client";
 
-import { ScrollArea, Stack } from "@mantine/core";
 import { useDisclosure } from "@mantine/hooks";
 import { useEffect, useRef, useState } from "react";
 import { ChatHistory } from "@/components/chat/ChatHistory";
 import { ChatInput } from "@/components/chat/ChatInput";
 import { BmrSetupModal } from "@/components/home/BmrSetupModal";
 import { DailySummary } from "@/components/home/DailySummary";
+import { PageLayout } from "@/components/layout/PageLayout";
 import type {
   BotChatItem,
   ChatItem,
@@ -180,14 +180,15 @@ export default function HomePage() {
 
   return (
     <>
-      <Stack gap="md" style={{ height: "100%" }}>
-        <DailySummary items={items} profile={profile} onSetupClick={open} />
-        <ScrollArea style={{ flex: 1, minHeight: 0 }} scrollbars="y">
-          <ChatHistory items={items} />
-          <div ref={bottomRef} />
-        </ScrollArea>
-        <ChatInput onSend={handleSend} disabled={sending} />
-      </Stack>
+      <PageLayout
+        top={
+          <DailySummary items={items} profile={profile} onSetupClick={open} />
+        }
+        bottom={<ChatInput onSend={handleSend} disabled={sending} />}
+      >
+        <ChatHistory items={items} />
+        <div ref={bottomRef} />
+      </PageLayout>
 
       <BmrSetupModal
         opened={opened}

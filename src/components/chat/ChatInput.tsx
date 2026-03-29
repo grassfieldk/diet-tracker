@@ -22,9 +22,8 @@ export function ChatInput({ onSend, disabled = false }: ChatInputProps) {
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.key === "Enter" && !e.shiftKey) {
+    if (e.key === "Enter") {
       e.preventDefault();
-      handleSend();
     }
   };
 

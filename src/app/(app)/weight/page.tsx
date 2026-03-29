@@ -1,16 +1,10 @@
 "use client";
 
-import {
-  Box,
-  Button,
-  Group,
-  NumberInput,
-  ScrollArea,
-  Stack,
-} from "@mantine/core";
+import { Button, Group, NumberInput } from "@mantine/core";
 import { DatePickerInput } from "@mantine/dates";
 import { useForm } from "@mantine/form";
 import { useEffect, useState } from "react";
+import { PageLayout } from "@/components/layout/PageLayout";
 import { WeightEditModal } from "@/components/weight/WeightEditModal";
 import { WeightGraph } from "@/components/weight/WeightGraph";
 import { WeightList } from "@/components/weight/WeightList";
@@ -124,59 +118,56 @@ export default function WeightPage() {
     }
   };
 
+  const inputArea = (
+    <form
+      onSubmit={form.onSubmit(handleSubmit)}
+      onKeyDown={(e) => {
+        if (e.key === "Enter") e.preventDefault();
+      }}
+    >
+      <Group align="flex-end" gap="sm">
+        <DatePickerInput
+          valueFormat="MM/DD"
+          placeholder="MM/DD"
+          maxDate={new Date()}
+          style={{ width: "4rem", textAlign: "center" }}
+          styles={{ input: { textAlign: "center" } }}
+          {...form.getInputProps("date")}
+        />
+        <NumberInput
+          placeholder="0.0"
+          min={10}
+          max={500}
+          decimalScale={1}
+          fixedDecimalScale
+          step={0.1}
+          style={{ flex: 1 }}
+          styles={{ input: { textAlign: "center" } }}
+          {...form.getInputProps("weight")}
+        />
+        <Button
+          type="submit"
+          loading={saving}
+          disabled={form.values.weight === ""}
+        >
+          記録
+        </Button>
+      </Group>
+    </form>
+  );
+
   return (
     <>
-      <Stack gap={0} style={{ height: "100%" }}>
-        {/* 上部固定: グラフ */}
-        <WeightGraph records={records} onRangeChange={setDays} />
-
-        {/* 中央スクロール: 記録一覧（枠なし） */}
-        <ScrollArea style={{ flex: 1, minHeight: 0 }} scrollbars="y">
-          <WeightList
-            records={records}
-            onEdit={setEditing}
-            onDelete={handleDelete}
-          />
-        </ScrollArea>
-
-        {/* 下部固定: 入力フォーム */}
-        <Box
-          px="md"
-          py="sm"
-          style={{ borderTop: "1px solid var(--mantine-color-default-border)" }}
-        >
-          <form onSubmit={form.onSubmit(handleSubmit)}>
-            <Group align="flex-end" gap="sm">
-              <DatePickerInput
-                valueFormat="MM/DD"
-                placeholder="MM/DD"
-                maxDate={new Date()}
-                style={{ width: "4rem", textAlign: "center" }}
-                styles={{ input: { textAlign: "center" } }}
-                {...form.getInputProps("date")}
-              />
-              <NumberInput
-                placeholder="0.0"
-                min={10}
-                max={500}
-                decimalScale={1}
-                fixedDecimalScale
-                step={0.1}
-                style={{ flex: 1 }}
-                styles={{ input: { textAlign: "center" } }}
-                {...form.getInputProps("weight")}
-              />
-              <Button
-                type="submit"
-                loading={saving}
-                disabled={form.values.weight === ""}
-              >
-                記録
-              </Button>
-            </Group>
-          </form>
-        </Box>
-      </Stack>
+      <PageLayout
+        top={<WeightGraph records={records} onRangeChange={setDays} />}
+        bottom={inputArea}
+      >
+        <WeightList
+          records={records}
+          onEdit={setEditing}
+          onDelete={handleDelete}
+        />
+      </PageLayout>
 
       <WeightEditModal
         record={editing}
