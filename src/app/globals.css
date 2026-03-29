@@ -2,3 +2,10 @@
 @import "@mantine/charts/styles.css";
 @import "@mantine/dates/styles.css";
 @import "@mantine/notifications/styles.css";
+
+/* iOS 入力時の自動ズームを防ぐため、入力フォームのフォントサイズを 16px 以上に固定 */
+input,
+textarea,
+select {
+  font-size: max(16px, 1em) !important;
+}

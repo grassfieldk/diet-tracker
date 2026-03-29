@@ -8,6 +8,7 @@ import {
   ScrollArea,
   Stack,
 } from "@mantine/core";
+import { DatePickerInput } from "@mantine/dates";
 import { useForm } from "@mantine/form";
 import { useEffect, useState } from "react";
 import { WeightEditModal } from "@/components/weight/WeightEditModal";
@@ -32,7 +33,10 @@ export default function WeightPage() {
   const [saving, setSaving] = useState(false);
 
   const form = useForm({
-    initialValues: { weight: "" as number | string },
+    initialValues: {
+      weight: "" as number | string,
+      date: new Date(),
+    },
     validate: {
       weight: (v) =>
         v === "" || Number(v) < 10 || Number(v) > 500
@@ -44,7 +48,15 @@ export default function WeightPage() {
   const loadRecords = (d: number) => {
     fetch(`/api/weights?days=${d}`)
       .then((r) => r.json())
-      .then((data: ApiWeightRecord[]) => setRecords(data.map(toWeightRecord)))
+      .then((data: ApiWeightRecord[]) => {
+        const converted = data.map(toWeightRecord);
+        setRecords(converted);
+        // 最新レコードの体重をデフォルト値として設定（初回ロード時のみ）
+        if (converted.length > 0) {
+          const latest = converted[converted.length - 1];
+          form.setFieldValue("weight", latest.weight);
+        }
+      })
       .catch(() => {});
   };
 
@@ -53,14 +65,20 @@ export default function WeightPage() {
     loadRecords(days);
   }, [days]);
 
-  const handleSubmit = async (values: { weight: number | string }) => {
+  const handleSubmit = async (values: {
+    weight: number | string;
+    date: Date;
+  }) => {
     const w = Number(values.weight);
     setSaving(true);
     try {
       const res = await fetch("/api/weights", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ weight: w }),
+        body: JSON.stringify({
+          weight: w,
+          recordedAt: values.date.toISOString(),
+        }),
       });
       const saved: ApiWeightRecord = await res.json();
       // 同日分が上書きされた場合に備え、既存レコードと id で突き合わせて upsert する
@@ -73,7 +91,7 @@ export default function WeightPage() {
           (a, b) => a.recordedAt.getTime() - b.recordedAt.getTime(),
         );
       });
-      form.reset();
+      form.setValues({ weight: "", date: new Date() });
     } catch {
       // エラー時は何もしない
     } finally {
@@ -129,16 +147,30 @@ export default function WeightPage() {
         >
           <form onSubmit={form.onSubmit(handleSubmit)}>
             <Group align="flex-end" gap="sm">
+              <DatePickerInput
+                valueFormat="MM/DD"
+                placeholder="MM/DD"
+                maxDate={new Date()}
+                style={{ width: "4rem", textAlign: "center" }}
+                styles={{ input: { textAlign: "center" } }}
+                {...form.getInputProps("date")}
+              />
               <NumberInput
-                placeholder="体重を入力 (kg)"
+                placeholder="0.0"
                 min={10}
                 max={500}
                 decimalScale={1}
+                fixedDecimalScale
                 step={0.1}
                 style={{ flex: 1 }}
+                styles={{ input: { textAlign: "center" } }}
                 {...form.getInputProps("weight")}
               />
-              <Button type="submit" loading={saving}>
+              <Button
+                type="submit"
+                loading={saving}
+                disabled={form.values.weight === ""}
+              >
                 記録
               </Button>
             </Group>

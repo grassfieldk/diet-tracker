@@ -32,7 +32,7 @@ export function ChatInput({ onSend, disabled = false }: ChatInputProps) {
     <Group gap="xs" align="flex-end">
       <Textarea
         ref={textareaRef}
-        placeholder="食事内容や体重を入力（例: 昼 ラーメン　/　体重 87.4kg）"
+        placeholder="食事内容または体重を入力"
         value={value}
         onChange={(e) => setValue(e.currentTarget.value)}
         onKeyDown={handleKeyDown}
@@ -43,7 +43,7 @@ export function ChatInput({ onSend, disabled = false }: ChatInputProps) {
         style={{ flex: 1 }}
       />
       <ActionIcon
-        size="lg"
+        size={38}
         variant="filled"
         onClick={handleSend}
         disabled={!value.trim() || disabled}
