@@ -52,13 +52,31 @@ export async function POST(request: Request) {
     update: {},
   });
 
-  const record = await prisma.weightRecord.create({
-    data: {
+  // 当日分が既に存在する場合は上書き
+  const todayStart = new Date();
+  todayStart.setHours(0, 0, 0, 0);
+  const todayEnd = new Date();
+  todayEnd.setHours(23, 59, 59, 999);
+
+  const existing = await prisma.weightRecord.findFirst({
+    where: {
       userId,
-      weight,
-      recordedAt: recordedAt ? new Date(recordedAt) : new Date(),
+      recordedAt: { gte: todayStart, lte: todayEnd },
     },
   });
+
+  const record = existing
+    ? await prisma.weightRecord.update({
+        where: { id: existing.id },
+        data: { weight, recordedAt: new Date() },
+      })
+    : await prisma.weightRecord.create({
+        data: {
+          userId,
+          weight,
+          recordedAt: recordedAt ? new Date(recordedAt) : new Date(),
+        },
+      });
 
   return Response.json(
     { id: record.id, weight: record.weight, recordedAt: record.recordedAt },

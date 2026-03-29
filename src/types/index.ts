@@ -65,6 +65,13 @@ export interface MealRecord {
   recordedAt: Date;
 }
 
+/** 体重管理画面で扱う体重記録 */
+export interface WeightRecord {
+  id: string;
+  weight: number;
+  recordedAt: Date;
+}
+
 export type Sex = "male" | "female";
 
 export interface UserProfile {

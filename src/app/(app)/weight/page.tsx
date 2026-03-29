@@ -1,12 +1,156 @@
-import { Container, Text, Title } from "@mantine/core";
+"use client";
+
+import {
+  Box,
+  Button,
+  Group,
+  NumberInput,
+  ScrollArea,
+  Stack,
+} from "@mantine/core";
+import { useForm } from "@mantine/form";
+import { useEffect, useState } from "react";
+import { WeightEditModal } from "@/components/weight/WeightEditModal";
+import { WeightGraph } from "@/components/weight/WeightGraph";
+import { WeightList } from "@/components/weight/WeightList";
+import type { WeightRecord } from "@/types";
+
+interface ApiWeightRecord {
+  id: string;
+  weight: number;
+  recordedAt: string;
+}
+
+function toWeightRecord(r: ApiWeightRecord): WeightRecord {
+  return { id: r.id, weight: r.weight, recordedAt: new Date(r.recordedAt) };
+}
 
 export default function WeightPage() {
+  const [records, setRecords] = useState<WeightRecord[]>([]);
+  const [editing, setEditing] = useState<WeightRecord | null>(null);
+  const [days, setDays] = useState(30);
+  const [saving, setSaving] = useState(false);
+
+  const form = useForm({
+    initialValues: { weight: "" as number | string },
+    validate: {
+      weight: (v) =>
+        v === "" || Number(v) < 10 || Number(v) > 500
+          ? "10〜500 の範囲で入力してください"
+          : null,
+    },
+  });
+
+  const loadRecords = (d: number) => {
+    fetch(`/api/weights?days=${d}`)
+      .then((r) => r.json())
+      .then((data: ApiWeightRecord[]) => setRecords(data.map(toWeightRecord)))
+      .catch(() => {});
+  };
+
+  // biome-ignore lint/correctness/useExhaustiveDependencies: days が変わったときだけ再取得するため意図的
+  useEffect(() => {
+    loadRecords(days);
+  }, [days]);
+
+  const handleSubmit = async (values: { weight: number | string }) => {
+    const w = Number(values.weight);
+    setSaving(true);
+    try {
+      const res = await fetch("/api/weights", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ weight: w }),
+      });
+      const saved: ApiWeightRecord = await res.json();
+      // 同日分が上書きされた場合に備え、既存レコードと id で突き合わせて upsert する
+      setRecords((prev) => {
+        const exists = prev.some((r) => r.id === saved.id);
+        const next = exists
+          ? prev.map((r) => (r.id === saved.id ? toWeightRecord(saved) : r))
+          : [...prev, toWeightRecord(saved)];
+        return next.sort(
+          (a, b) => a.recordedAt.getTime() - b.recordedAt.getTime(),
+        );
+      });
+      form.reset();
+    } catch {
+      // エラー時は何もしない
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleDelete = async (id: string) => {
+    try {
+      await fetch(`/api/weights/${id}`, { method: "DELETE" });
+      setRecords((prev) => prev.filter((r) => r.id !== id));
+    } catch {
+      // エラー時は状態を変更しない
+    }
+  };
+
+  const handleSave = async (id: string, weight: number) => {
+    try {
+      const res = await fetch(`/api/weights/${id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ weight }),
+      });
+      const updated: ApiWeightRecord = await res.json();
+      setRecords((prev) =>
+        prev.map((r) => (r.id === id ? toWeightRecord(updated) : r)),
+      );
+    } catch {
+      // エラー時は状態を変更しない
+    }
+  };
+
   return (
-    <Container>
-      <Title order={2} mb="md">
-        体重管理
-      </Title>
-      <Text c="dimmed">準備中</Text>
-    </Container>
+    <>
+      <Stack gap={0} style={{ height: "100%" }}>
+        {/* 上部固定: グラフ */}
+        <WeightGraph records={records} onRangeChange={setDays} />
+
+        {/* 中央スクロール: 記録一覧（枠なし） */}
+        <ScrollArea style={{ flex: 1, minHeight: 0 }} scrollbars="y">
+          <WeightList
+            records={records}
+            onEdit={setEditing}
+            onDelete={handleDelete}
+          />
+        </ScrollArea>
+
+        {/* 下部固定: 入力フォーム */}
+        <Box
+          px="md"
+          py="sm"
+          style={{ borderTop: "1px solid var(--mantine-color-default-border)" }}
+        >
+          <form onSubmit={form.onSubmit(handleSubmit)}>
+            <Group align="flex-end" gap="sm">
+              <NumberInput
+                placeholder="体重を入力 (kg)"
+                min={10}
+                max={500}
+                decimalScale={1}
+                step={0.1}
+                style={{ flex: 1 }}
+                {...form.getInputProps("weight")}
+              />
+              <Button type="submit" loading={saving}>
+                記録
+              </Button>
+            </Group>
+          </form>
+        </Box>
+      </Stack>
+
+      <WeightEditModal
+        record={editing}
+        onClose={() => setEditing(null)}
+        onSave={handleSave}
+      />
+    </>
   );
 }
