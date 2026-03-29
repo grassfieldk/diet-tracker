@@ -25,13 +25,16 @@
     "next": "16.2.1",
     "react": "19.2.4",
     "react-dom": "19.2.4",
-    "recharts": "^3.8.1"
+    "recharts": "^3.8.1",
+    "serwist": "^9.5.7"
   },
   "devDependencies": {
     "@biomejs/biome": "2.2.0",
+    "@serwist/turbopack": "^9.5.7",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "esbuild": "^0.27.4",
     "postcss-preset-mantine": "^1.18.0",
     "postcss-simple-vars": "^7.0.1",
     "prisma": "6",
@@ -44,6 +47,7 @@
   "trustedDependencies": [
     "@prisma/client",
     "@prisma/engines",
+    "esbuild",
     "prisma",
     "protobufjs",
     "sharp",

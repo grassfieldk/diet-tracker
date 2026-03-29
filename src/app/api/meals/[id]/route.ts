@@ -40,7 +40,7 @@ export async function PUT(request: Request, { params }: RouteParams) {
       id: record.id,
       mealCategory: record.mealCategory,
       rawText: record.rawText ?? "",
-      analysis: record.analysisJson as NutritionAnalysis,
+      analysis: record.analysisJson as unknown as NutritionAnalysis,
       totalCalories: record.totalCalories,
       totalProtein: record.totalProtein,
       totalFat: record.totalFat,
