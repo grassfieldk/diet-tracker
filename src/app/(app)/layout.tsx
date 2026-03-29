@@ -6,7 +6,9 @@ import {
   AppShellMain,
   AppShellNavbar,
   AppShellSection,
+  Button,
   Group,
+  Modal,
   NavLink,
   Stack,
   Text,
@@ -18,6 +20,7 @@ import { useDisclosure, useMediaQuery } from "@mantine/hooks";
 import {
   IconClipboardList,
   IconHome,
+  IconLogout,
   IconMoon,
   IconScale,
   IconSun,
@@ -57,10 +60,128 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const isMobile = useMediaQuery("(max-width: 47.9375em)");
   const [, { close }] = useDisclosure();
+  const [logoutOpened, { open: openLogout, close: closeLogout }] =
+    useDisclosure(false);
+
+  const LogoutModal = (
+    <Modal
+      opened={logoutOpened}
+      onClose={closeLogout}
+      title="ログアウト"
+      centered
+      size="xs"
+    >
+      <Text size="sm" mb="lg">
+        ログアウトしますか？
+      </Text>
+      <Group justify="flex-end" gap="sm">
+        <Button variant="default" onClick={closeLogout}>
+          キャンセル
+        </Button>
+        <Button color="red" component="a" href="/auth/logout">
+          ログアウト
+        </Button>
+      </Group>
+    </Modal>
+  );
 
   if (isMobile) {
     return (
-      <AppShell footer={{ height: 60 }} padding="md">
+      <>
+        <AppShell footer={{ height: 60 }} padding="md">
+          <AppShellMain
+            style={{
+              height: "100dvh",
+              minHeight: 0,
+              boxSizing: "border-box",
+              overflowY: "auto",
+              overflowX: "hidden",
+            }}
+          >
+            {children}
+          </AppShellMain>
+          <AppShellFooter>
+            <Group h="100%" justify="space-around" px="md">
+              {NAV_ITEMS.map(({ href, label, icon: Icon }) => (
+                <UnstyledButton
+                  key={href}
+                  component={Link}
+                  href={href}
+                  style={{ flex: 1 }}
+                >
+                  <Stack gap={2} align="center">
+                    <Icon
+                      size={22}
+                      color={
+                        pathname === href
+                          ? "var(--mantine-color-blue-6)"
+                          : "var(--mantine-color-dimmed)"
+                      }
+                    />
+                    <Text
+                      size="xs"
+                      c={pathname === href ? "blue" : "dimmed"}
+                      fw={pathname === href ? 600 : 400}
+                    >
+                      {label}
+                    </Text>
+                  </Stack>
+                </UnstyledButton>
+              ))}
+              <UnstyledButton onClick={openLogout} style={{ flex: 1 }}>
+                <Stack gap={2} align="center">
+                  <IconLogout size={22} color="var(--mantine-color-dimmed)" />
+                  <Text size="xs" c="dimmed">
+                    ログアウト
+                  </Text>
+                </Stack>
+              </UnstyledButton>
+            </Group>
+          </AppShellFooter>
+        </AppShell>
+        {LogoutModal}
+      </>
+    );
+  }
+
+  return (
+    <>
+      <AppShell
+        navbar={{ width: 220, breakpoint: "sm" }}
+        padding="md"
+        withBorder
+      >
+        <AppShellNavbar p="md">
+          <AppShellSection>
+            <Text fw={700} size="lg" mb="lg" c="blue">
+              Diet Tracker
+            </Text>
+            <Stack gap={4}>
+              {NAV_ITEMS.map(({ href, label, icon: Icon }) => (
+                <NavLink
+                  key={href}
+                  component={Link}
+                  href={href}
+                  label={label}
+                  leftSection={<Icon size={18} />}
+                  active={pathname === href}
+                  onClick={close}
+                />
+              ))}
+            </Stack>
+          </AppShellSection>
+          <AppShellSection grow />
+          <AppShellSection>
+            <Group justify="space-between">
+              <NavLink
+                onClick={openLogout}
+                label="ログアウト"
+                leftSection={<IconLogout size={18} />}
+              />
+              <ColorSchemeToggle />
+            </Group>
+          </AppShellSection>
+        </AppShellNavbar>
         <AppShellMain
           style={{
             height: "100dvh",
@@ -72,79 +193,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         >
           {children}
         </AppShellMain>
-        <AppShellFooter>
-          <Group h="100%" justify="space-around" px="md">
-            {NAV_ITEMS.map(({ href, label, icon: Icon }) => (
-              <UnstyledButton
-                key={href}
-                component={Link}
-                href={href}
-                style={{ flex: 1 }}
-              >
-                <Stack gap={2} align="center">
-                  <Icon
-                    size={22}
-                    color={
-                      pathname === href
-                        ? "var(--mantine-color-blue-6)"
-                        : "var(--mantine-color-dimmed)"
-                    }
-                  />
-                  <Text
-                    size="xs"
-                    c={pathname === href ? "blue" : "dimmed"}
-                    fw={pathname === href ? 600 : 400}
-                  >
-                    {label}
-                  </Text>
-                </Stack>
-              </UnstyledButton>
-            ))}
-          </Group>
-        </AppShellFooter>
       </AppShell>
-    );
-  }
-
-  return (
-    <AppShell navbar={{ width: 220, breakpoint: "sm" }} padding="md" withBorder>
-      <AppShellNavbar p="md">
-        <AppShellSection>
-          <Text fw={700} size="lg" mb="lg" c="blue">
-            Diet Tracker
-          </Text>
-          <Stack gap={4}>
-            {NAV_ITEMS.map(({ href, label, icon: Icon }) => (
-              <NavLink
-                key={href}
-                component={Link}
-                href={href}
-                label={label}
-                leftSection={<Icon size={18} />}
-                active={pathname === href}
-                onClick={close}
-              />
-            ))}
-          </Stack>
-        </AppShellSection>
-        <AppShellSection grow />
-        <AppShellSection>
-          <Group justify="flex-end">
-            <ColorSchemeToggle />
-          </Group>
-        </AppShellSection>
-      </AppShellNavbar>
-      <AppShellMain
-        style={{
-          height: "100dvh",
-          minHeight: 0,
-          boxSizing: "border-box",
-          overflowY: "auto",
-          overflowX: "hidden",
-        }}
-      >
-        {children}
-      </AppShellMain>
-    </AppShell>
+      {LogoutModal}
+    </>
   );
 }
