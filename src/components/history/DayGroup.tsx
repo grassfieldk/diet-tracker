@@ -159,18 +159,18 @@ function MealRecordRow({
                 >
                   <Table.Th>食品</Table.Th>
                   <Table.Th>量</Table.Th>
-                  <Table.Th ta="right">kcal</Table.Th>
-                  <Table.Th ta="right">P(g)</Table.Th>
-                  <Table.Th ta="right">F(g)</Table.Th>
-                  <Table.Th ta="right">C(g)</Table.Th>
+                  <Table.Th ta="center">kcal</Table.Th>
+                  <Table.Th ta="center">P</Table.Th>
+                  <Table.Th ta="center">F</Table.Th>
+                  <Table.Th ta="center">C</Table.Th>
                 </Table.Tr>
                 <Table.Tr fw={600}>
                   <Table.Td>合計</Table.Td>
                   <Table.Td />
-                  <Table.Td ta="right">{analysis.totalCalories}</Table.Td>
-                  <Table.Td ta="right">{analysis.totalProtein}</Table.Td>
-                  <Table.Td ta="right">{analysis.totalFat}</Table.Td>
-                  <Table.Td ta="right">{analysis.totalCarbs}</Table.Td>
+                  <Table.Td ta="center">{analysis.totalCalories}</Table.Td>
+                  <Table.Td ta="center">{analysis.totalProtein}</Table.Td>
+                  <Table.Td ta="center">{analysis.totalFat}</Table.Td>
+                  <Table.Td ta="center">{analysis.totalCarbs}</Table.Td>
                 </Table.Tr>
               </Table.Thead>
               <Table.Tbody>
@@ -178,10 +178,10 @@ function MealRecordRow({
                   <Table.Tr key={`${food.name}-${i}`}>
                     <Table.Td>{food.name}</Table.Td>
                     <Table.Td>{food.quantity}</Table.Td>
-                    <Table.Td ta="right">{food.calories}</Table.Td>
-                    <Table.Td ta="right">{food.protein}</Table.Td>
-                    <Table.Td ta="right">{food.fat}</Table.Td>
-                    <Table.Td ta="right">{food.carbs}</Table.Td>
+                    <Table.Td ta="center">{food.calories}</Table.Td>
+                    <Table.Td ta="center">{food.protein}</Table.Td>
+                    <Table.Td ta="center">{food.fat}</Table.Td>
+                    <Table.Td ta="center">{food.carbs}</Table.Td>
                   </Table.Tr>
                 ))}
               </Table.Tbody>
