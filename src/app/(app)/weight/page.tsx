@@ -32,12 +32,13 @@ export default function WeightPage() {
   const [days, setDays] = useState(30);
   const [saving, setSaving] = useState(false);
 
-  const form = useForm({
+  const form = useForm<{ weight: number | string; date: Date | null }>({
     initialValues: {
       weight: "" as number | string,
       date: new Date(),
     },
     validate: {
+      date: (v) => (v == null ? "日付を選択してください" : null),
       weight: (v) =>
         v === "" || Number(v) < 10 || Number(v) > 500
           ? "10〜500 の範囲で入力してください"
@@ -81,9 +82,10 @@ export default function WeightPage() {
 
   const handleSubmit = async (values: {
     weight: number | string;
-    date: Date;
+    date: Date | null;
   }) => {
     const w = Number(values.weight);
+    const recordedAt = new Date(values.date ?? new Date()).toISOString();
     setSaving(true);
     try {
       const res = await fetch("/api/weights", {
@@ -91,7 +93,7 @@ export default function WeightPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           weight: w,
-          recordedAt: values.date.toISOString(),
+          recordedAt,
         }),
       });
       const saved: ApiWeightRecord = await res.json();
@@ -111,7 +113,7 @@ export default function WeightPage() {
         recordsCache.set(days, next);
         return next;
       });
-      form.setValues({ weight: "", date: new Date() });
+      form.setFieldValue("date", new Date());
     } catch {
       // エラー時は何もしない
     } finally {
