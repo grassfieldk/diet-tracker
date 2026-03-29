@@ -1,10 +1,11 @@
-import { Badge, Divider, Stack, Text } from "@mantine/core";
+import { Badge, Divider, Loader, Stack, Text } from "@mantine/core";
 import type { ChatItem } from "@/types";
 import { BotBubble } from "./BotBubble";
 import { UserBubble } from "./UserBubble";
 
 interface ChatHistoryProps {
   items: ChatItem[];
+  loading?: boolean;
 }
 
 function formatDateBadge(date: Date): string {
@@ -22,7 +23,10 @@ function formatDateBadge(date: Date): string {
   return `${y}/${m}/${d}`;
 }
 
-export function ChatHistory({ items }: ChatHistoryProps) {
+export function ChatHistory({ items, loading = false }: ChatHistoryProps) {
+  if (loading) {
+    return <Loader size="sm" display="block" mx="auto" mt="xl" />;
+  }
   if (items.length === 0) {
     return (
       <Text ta="center" c="dimmed" py="xl" size="sm">

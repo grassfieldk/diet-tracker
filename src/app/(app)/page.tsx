@@ -18,23 +18,33 @@ import type {
 
 const INITIAL_LOAD_LIMIT = 20;
 
+// モジュールレベルキャッシュ（タブ切り替えで破棄されない）
+let cachedItems: ChatItem[] | null = null;
+let cachedProfile: UserProfile | null = null;
+
 function todayString(): string {
   const d = new Date();
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
 export default function HomePage() {
-  const [items, setItems] = useState<ChatItem[]>([]);
-  const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [items, setItems] = useState<ChatItem[]>(cachedItems ?? []);
+  const [profile, setProfile] = useState<UserProfile | null>(cachedProfile);
+  const [loading, setLoading] = useState(cachedItems === null);
   const [sending, setSending] = useState(false);
   const [opened, { open, close }] = useDisclosure(false);
   const bottomRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+    if (cachedItems !== null) return;
+
     fetch("/api/user/profile")
       .then((r) => r.json())
       .then((data: UserProfile | null) => {
-        if (data) setProfile(data);
+        if (data) {
+          cachedProfile = data;
+          setProfile(data);
+        }
       })
       .catch(() => {});
 
@@ -67,10 +77,14 @@ export default function HomePage() {
               createdAt: new Date(record.recordedAt),
             });
           }
+          cachedItems = loaded;
           setItems(loaded);
+          setLoading(false);
         },
       )
-      .catch(() => {});
+      .catch(() => {
+        setLoading(false);
+      });
   }, []);
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: items 追加時に最下部へスクロールするため意図的な依存
@@ -91,7 +105,11 @@ export default function HomePage() {
       createdAt,
     };
 
-    setItems((prev) => [...prev, userItem, pendingItem]);
+    setItems((prev) => {
+      const next = [...prev, userItem, pendingItem];
+      cachedItems = next;
+      return next;
+    });
     setSending(true);
 
     try {
@@ -128,9 +146,11 @@ export default function HomePage() {
           analysis: analyzed.analysis,
           createdAt,
         };
-        setItems((prev) =>
-          prev.map((item) => (item.id === bid ? botItem : item)),
-        );
+        setItems((prev) => {
+          const next = prev.map((item) => (item.id === bid ? botItem : item));
+          cachedItems = next;
+          return next;
+        });
       } else if (analyzed.type === "weight" && analyzed.weightKg != null) {
         await fetch("/api/weights", {
           method: "POST",
@@ -145,27 +165,36 @@ export default function HomePage() {
           weightKg: analyzed.weightKg,
           createdAt,
         };
-        setItems((prev) =>
-          prev.map((item) => (item.id === bid ? botItem : item)),
-        );
+        setItems((prev) => {
+          const next = prev.map((item) => (item.id === bid ? botItem : item));
+          cachedItems = next;
+          return next;
+        });
       } else {
-        setItems((prev) =>
-          prev.map((item) =>
+        setItems((prev) => {
+          const next = prev.map((item) =>
             item.id === bid
               ? ({ ...item, type: "off-topic" } as BotChatItem)
               : item,
-          ),
-        );
+          );
+          cachedItems = next;
+          return next;
+        });
       }
     } catch {
       // エラー時は pending bot アイテムを除去
-      setItems((prev) => prev.filter((item) => item.id !== bid));
+      setItems((prev) => {
+        const next = prev.filter((item) => item.id !== bid);
+        cachedItems = next;
+        return next;
+      });
     } finally {
       setSending(false);
     }
   };
 
   const handleProfileSave = async (p: UserProfile) => {
+    cachedProfile = p;
     setProfile(p);
     try {
       await fetch("/api/user/profile", {
@@ -186,7 +215,7 @@ export default function HomePage() {
         }
         bottom={<ChatInput onSend={handleSend} disabled={sending} />}
       >
-        <ChatHistory items={items} />
+        <ChatHistory items={items} loading={loading} />
         <div ref={bottomRef} />
       </PageLayout>
 

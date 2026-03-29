@@ -20,8 +20,14 @@ function toWeightRecord(r: ApiWeightRecord): WeightRecord {
   return { id: r.id, weight: r.weight, recordedAt: new Date(r.recordedAt) };
 }
 
+// モジュールレベルキャッシュ（days 別）
+const recordsCache = new Map<number, WeightRecord[]>();
+
 export default function WeightPage() {
-  const [records, setRecords] = useState<WeightRecord[]>([]);
+  const [records, setRecords] = useState<WeightRecord[]>(
+    recordsCache.get(30) ?? [],
+  );
+  const [loading, setLoading] = useState(!recordsCache.has(30));
   const [editing, setEditing] = useState<WeightRecord | null>(null);
   const [days, setDays] = useState(30);
   const [saving, setSaving] = useState(false);
@@ -40,18 +46,32 @@ export default function WeightPage() {
   });
 
   const loadRecords = (d: number) => {
+    if (recordsCache.has(d)) {
+      const cached = recordsCache.get(d) ?? [];
+      setRecords(cached);
+      setLoading(false);
+      if (cached.length > 0) {
+        form.setFieldValue("weight", cached[cached.length - 1].weight);
+      }
+      return;
+    }
+    setLoading(true);
     fetch(`/api/weights?days=${d}`)
       .then((r) => r.json())
       .then((data: ApiWeightRecord[]) => {
         const converted = data.map(toWeightRecord);
+        recordsCache.set(d, converted);
         setRecords(converted);
+        setLoading(false);
         // 最新レコードの体重をデフォルト値として設定（初回ロード時のみ）
         if (converted.length > 0) {
           const latest = converted[converted.length - 1];
           form.setFieldValue("weight", latest.weight);
         }
       })
-      .catch(() => {});
+      .catch(() => {
+        setLoading(false);
+      });
   };
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: days が変わったときだけ再取得するため意図的
@@ -77,13 +97,19 @@ export default function WeightPage() {
       const saved: ApiWeightRecord = await res.json();
       // 同日分が上書きされた場合に備え、既存レコードと id で突き合わせて upsert する
       setRecords((prev) => {
-        const exists = prev.some((r) => r.id === saved.id);
-        const next = exists
-          ? prev.map((r) => (r.id === saved.id ? toWeightRecord(saved) : r))
-          : [...prev, toWeightRecord(saved)];
-        return next.sort(
-          (a, b) => a.recordedAt.getTime() - b.recordedAt.getTime(),
-        );
+        const next = ((): WeightRecord[] => {
+          const exists = prev.some((r) => r.id === saved.id);
+          const arr = exists
+            ? prev.map((r) => (r.id === saved.id ? toWeightRecord(saved) : r))
+            : [...prev, toWeightRecord(saved)];
+          return arr.sort(
+            (a, b) => a.recordedAt.getTime() - b.recordedAt.getTime(),
+          );
+        })();
+        // 全 days キャッシュを無効化（新しいレコードが含まれるため）
+        recordsCache.clear();
+        recordsCache.set(days, next);
+        return next;
       });
       form.setValues({ weight: "", date: new Date() });
     } catch {
@@ -96,7 +122,11 @@ export default function WeightPage() {
   const handleDelete = async (id: string) => {
     try {
       await fetch(`/api/weights/${id}`, { method: "DELETE" });
-      setRecords((prev) => prev.filter((r) => r.id !== id));
+      setRecords((prev) => {
+        const next = prev.filter((r) => r.id !== id);
+        recordsCache.set(days, next);
+        return next;
+      });
     } catch {
       // エラー時は状態を変更しない
     }
@@ -110,9 +140,13 @@ export default function WeightPage() {
         body: JSON.stringify({ weight }),
       });
       const updated: ApiWeightRecord = await res.json();
-      setRecords((prev) =>
-        prev.map((r) => (r.id === id ? toWeightRecord(updated) : r)),
-      );
+      setRecords((prev) => {
+        const next = prev.map((r) =>
+          r.id === id ? toWeightRecord(updated) : r,
+        );
+        recordsCache.set(days, next);
+        return next;
+      });
     } catch {
       // エラー時は状態を変更しない
     }
@@ -159,13 +193,20 @@ export default function WeightPage() {
   return (
     <>
       <PageLayout
-        top={<WeightGraph records={records} onRangeChange={setDays} />}
+        top={
+          <WeightGraph
+            records={records}
+            onRangeChange={setDays}
+            loading={loading}
+          />
+        }
         bottom={inputArea}
       >
         <WeightList
           records={records}
           onEdit={setEditing}
           onDelete={handleDelete}
+          loading={loading}
         />
       </PageLayout>
 

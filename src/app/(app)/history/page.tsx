@@ -1,6 +1,6 @@
 "use client";
 
-import { ScrollArea, Stack, Text } from "@mantine/core";
+import { Loader, ScrollArea, Stack, Text } from "@mantine/core";
 import { useEffect, useState } from "react";
 import { DayGroup } from "@/components/history/DayGroup";
 import { MealEditModal } from "@/components/history/MealEditModal";
@@ -51,23 +51,37 @@ function toMealRecord(r: ApiMealRecord): MealRecord {
   };
 }
 
+// モジュールレベルキャッシュ
+let cachedRecords: MealRecord[] | null = null;
+
 export default function HistoryPage() {
-  const [records, setRecords] = useState<MealRecord[]>([]);
+  const [records, setRecords] = useState<MealRecord[]>(cachedRecords ?? []);
+  const [loading, setLoading] = useState(cachedRecords === null);
   const [editing, setEditing] = useState<MealRecord | null>(null);
 
   useEffect(() => {
+    if (cachedRecords !== null) return;
     fetch("/api/meals")
       .then((r) => r.json())
       .then((data: ApiMealRecord[]) => {
-        setRecords(data.map(toMealRecord));
+        const converted = data.map(toMealRecord);
+        cachedRecords = converted;
+        setRecords(converted);
+        setLoading(false);
       })
-      .catch(() => {});
+      .catch(() => {
+        setLoading(false);
+      });
   }, []);
 
   const handleDelete = async (id: string) => {
     try {
       await fetch(`/api/meals/${id}`, { method: "DELETE" });
-      setRecords((prev) => prev.filter((r) => r.id !== id));
+      setRecords((prev) => {
+        const next = prev.filter((r) => r.id !== id);
+        cachedRecords = next;
+        return next;
+      });
     } catch {
       // エラー時は状態を変更しない
     }
@@ -89,9 +103,11 @@ export default function HistoryPage() {
         body: JSON.stringify(values),
       });
       const updated: ApiMealRecord = await res.json();
-      setRecords((prev) =>
-        prev.map((r) => (r.id === id ? toMealRecord(updated) : r)),
-      );
+      setRecords((prev) => {
+        const next = prev.map((r) => (r.id === id ? toMealRecord(updated) : r));
+        cachedRecords = next;
+        return next;
+      });
     } catch {
       // エラー時は状態を変更しない
     }
@@ -103,7 +119,9 @@ export default function HistoryPage() {
     <>
       <ScrollArea style={{ height: "100%" }}>
         <Stack gap="xl" pb="md">
-          {groups.length === 0 ? (
+          {loading ? (
+            <Loader size="sm" display="block" mx="auto" mt="xl" />
+          ) : groups.length === 0 ? (
             <Text ta="center" c="dimmed" py="xl">
               記録がありません
             </Text>

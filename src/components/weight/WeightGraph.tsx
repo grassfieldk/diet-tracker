@@ -1,13 +1,21 @@
 "use client";
 
 import { LineChart } from "@mantine/charts";
-import { Box, Group, Paper, SegmentedControl, Text } from "@mantine/core";
+import {
+  Box,
+  Group,
+  Loader,
+  Paper,
+  SegmentedControl,
+  Text,
+} from "@mantine/core";
 import { useState } from "react";
 import type { WeightRecord } from "@/types";
 
 interface WeightGraphProps {
   records: WeightRecord[];
   onRangeChange: (days: number) => void;
+  loading?: boolean;
 }
 
 const RANGES = [
@@ -16,7 +24,11 @@ const RANGES = [
   { label: "90日", value: "90" },
 ];
 
-export function WeightGraph({ records, onRangeChange }: WeightGraphProps) {
+export function WeightGraph({
+  records,
+  onRangeChange,
+  loading = false,
+}: WeightGraphProps) {
   const [range, setRange] = useState("30");
 
   const handleChange = (val: string) => {
@@ -50,7 +62,11 @@ export function WeightGraph({ records, onRangeChange }: WeightGraphProps) {
         />
       </Group>
 
-      {data.length === 0 ? (
+      {loading ? (
+        <Box py="xl">
+          <Loader size="sm" display="block" mx="auto" />
+        </Box>
+      ) : data.length === 0 ? (
         <Box py="xl">
           <Text ta="center" c="dimmed" size="sm">
             記録がありません

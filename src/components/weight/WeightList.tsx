@@ -1,6 +1,6 @@
 "use client";
 
-import { ActionIcon, Divider, Group, Stack, Text } from "@mantine/core";
+import { ActionIcon, Divider, Group, Loader, Stack, Text } from "@mantine/core";
 import { IconPencil, IconTrash } from "@tabler/icons-react";
 import type { WeightRecord } from "@/types";
 
@@ -8,6 +8,7 @@ interface WeightListProps {
   records: WeightRecord[];
   onEdit: (record: WeightRecord) => void;
   onDelete: (id: string) => void;
+  loading?: boolean;
 }
 
 function formatDate(date: Date): string {
@@ -18,7 +19,15 @@ function formatDate(date: Date): string {
   return `${date.getFullYear()}/${m}/${d}（${w}）`;
 }
 
-export function WeightList({ records, onEdit, onDelete }: WeightListProps) {
+export function WeightList({
+  records,
+  onEdit,
+  onDelete,
+  loading = false,
+}: WeightListProps) {
+  if (loading) {
+    return <Loader size="sm" display="block" mx="auto" mt="xl" />;
+  }
   if (records.length === 0) {
     return (
       <Text ta="center" c="dimmed" size="sm" py="md">
