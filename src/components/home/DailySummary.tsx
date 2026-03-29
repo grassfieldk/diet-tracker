@@ -2,7 +2,7 @@
 
 import { Anchor, Box, Group, Paper, Stack, Text, Tooltip } from "@mantine/core";
 import { PfcBar } from "@/components/common/PfcBar";
-import type { ChatMessage, UserProfile } from "@/types";
+import type { BotChatItem, ChatItem, UserProfile } from "@/types";
 
 interface BmrBarProps {
   consumed: number;
@@ -96,36 +96,46 @@ function BmrBar({ consumed, bmr }: BmrBarProps) {
 }
 
 interface DailySummaryProps {
-  messages: ChatMessage[];
+  items: ChatItem[];
   profile: UserProfile | null;
   onSetupClick: () => void;
 }
 
 export function DailySummary({
-  messages,
+  items,
   profile,
   onSetupClick,
 }: DailySummaryProps) {
-  const mealMessages = messages.filter((m) => m.type === "meal" && m.analysis);
+  const todayStr = new Date().toDateString();
+  const todayBotMeals = items.filter(
+    (item): item is BotChatItem =>
+      item.kind === "bot" &&
+      item.type === "meal" &&
+      item.analysis != null &&
+      item.createdAt.toDateString() === todayStr,
+  );
 
-  const totalCalories = mealMessages.reduce(
+  const totalCalories = todayBotMeals.reduce(
     (sum, m) => sum + (m.analysis?.totalCalories ?? 0),
     0,
   );
-  const totalProtein = mealMessages.reduce(
+  const totalProtein = todayBotMeals.reduce(
     (sum, m) => sum + (m.analysis?.totalProtein ?? 0),
     0,
   );
-  const totalFat = mealMessages.reduce(
+  const totalFat = todayBotMeals.reduce(
     (sum, m) => sum + (m.analysis?.totalFat ?? 0),
     0,
   );
-  const totalCarbs = mealMessages.reduce(
+  const totalCarbs = todayBotMeals.reduce(
     (sum, m) => sum + (m.analysis?.totalCarbs ?? 0),
     0,
   );
 
-  const bmrDiff = profile ? Math.round(totalCalories - profile.bmr) : null;
+  const bmrDiff =
+    profile && profile.bmr != null
+      ? Math.round(totalCalories - profile.bmr)
+      : null;
 
   return (
     <Paper p="md" withBorder radius="md">
@@ -141,7 +151,7 @@ export function DailySummary({
             </Group>
           </Group>
 
-          {profile !== null && bmrDiff !== null && (
+          {profile !== null && profile.bmr != null && bmrDiff !== null && (
             <BmrBar consumed={totalCalories} bmr={profile.bmr} />
           )}
 

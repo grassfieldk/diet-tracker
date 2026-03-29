@@ -1,25 +1,66 @@
-import { Stack, Text } from "@mantine/core";
-import type { ChatMessage as ChatMessageType } from "@/types";
-import { ChatMessage } from "./ChatMessage";
+import { Badge, Divider, Stack, Text } from "@mantine/core";
+import type { ChatItem } from "@/types";
+import { BotBubble } from "./BotBubble";
+import { UserBubble } from "./UserBubble";
 
 interface ChatHistoryProps {
-  messages: ChatMessageType[];
+  items: ChatItem[];
 }
 
-export function ChatHistory({ messages }: ChatHistoryProps) {
-  if (messages.length === 0) {
+function formatDateBadge(date: Date): string {
+  const today = new Date();
+  if (
+    date.getFullYear() === today.getFullYear() &&
+    date.getMonth() === today.getMonth() &&
+    date.getDate() === today.getDate()
+  ) {
+    return "今日";
+  }
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, "0");
+  const d = String(date.getDate()).padStart(2, "0");
+  return `${y}/${m}/${d}`;
+}
+
+export function ChatHistory({ items }: ChatHistoryProps) {
+  if (items.length === 0) {
     return (
       <Text ta="center" c="dimmed" py="xl" size="sm">
-        今日の記録はまだありません
+        記録はまだありません
       </Text>
     );
   }
 
+  const nodes: React.ReactNode[] = [];
+  let lastDateStr = "";
+
+  for (const item of items) {
+    const dateStr = item.createdAt.toDateString();
+    if (dateStr !== lastDateStr) {
+      lastDateStr = dateStr;
+      nodes.push(
+        <Divider
+          key={`sep-${dateStr}`}
+          label={
+            <Badge variant="light" color="gray" size="sm" radius="xl">
+              {formatDateBadge(item.createdAt)}
+            </Badge>
+          }
+          labelPosition="center"
+          my={4}
+        />,
+      );
+    }
+    if (item.kind === "user") {
+      nodes.push(<UserBubble key={item.id} item={item} />);
+    } else {
+      nodes.push(<BotBubble key={item.id} item={item} />);
+    }
+  }
+
   return (
-    <Stack gap="lg" pb="xs">
-      {messages.map((msg) => (
-        <ChatMessage key={msg.id} message={msg} />
-      ))}
+    <Stack gap="sm" pb="xs">
+      {nodes}
     </Stack>
   );
 }

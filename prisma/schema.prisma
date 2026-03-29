@@ -37,6 +37,7 @@ model MealRecord {
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   mealCategory String // "朝食" | "昼食" | "夕食" | "間食"
+  rawText      String? // ユーザーが入力したテキスト
 
   // AI 解析結果（JSON で保存）
   analysisJson   Json

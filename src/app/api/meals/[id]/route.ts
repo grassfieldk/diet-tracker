@@ -39,6 +39,7 @@ export async function PUT(request: Request, { params }: RouteParams) {
     return Response.json({
       id: record.id,
       mealCategory: record.mealCategory,
+      rawText: record.rawText ?? "",
       analysis: record.analysisJson as NutritionAnalysis,
       totalCalories: record.totalCalories,
       totalProtein: record.totalProtein,

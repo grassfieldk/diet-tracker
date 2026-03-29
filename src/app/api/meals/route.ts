@@ -11,6 +11,7 @@ export async function GET(request: Request) {
 
   const { searchParams } = new URL(request.url);
   const date = searchParams.get("date"); // YYYY-MM-DD
+  const limit = searchParams.get("limit"); // 件数制限
 
   const records = await prisma.mealRecord.findMany({
     where: {
@@ -24,13 +25,17 @@ export async function GET(request: Request) {
           }
         : {}),
     },
-    orderBy: { recordedDate: "asc" },
+    orderBy: { recordedDate: limit ? "desc" : "asc" },
+    ...(limit ? { take: Number(limit) } : {}),
   });
 
+  const sorted = limit ? [...records].reverse() : records;
+
   return Response.json(
-    records.map((r) => ({
+    sorted.map((r) => ({
       id: r.id,
       mealCategory: r.mealCategory,
+      rawText: r.rawText ?? "",
       analysis: r.analysisJson as NutritionAnalysis,
       totalCalories: r.totalCalories,
       totalProtein: r.totalProtein,
@@ -49,7 +54,7 @@ export async function POST(request: Request) {
   const userId = session.user.sub;
 
   const body = await request.json();
-  const { mealCategory, analysis, recordedDate } = body;
+  const { mealCategory, analysis, rawText, recordedDate } = body;
 
   if (!mealCategory || !analysis) {
     return Response.json(
@@ -69,6 +74,7 @@ export async function POST(request: Request) {
     data: {
       userId,
       mealCategory,
+      rawText: rawText ?? null,
       analysisJson: analysis,
       totalCalories: analysis.totalCalories,
       totalProtein: analysis.totalProtein,
@@ -82,6 +88,7 @@ export async function POST(request: Request) {
     {
       id: record.id,
       mealCategory: record.mealCategory,
+      rawText: record.rawText ?? "",
       analysis: record.analysisJson as NutritionAnalysis,
       totalCalories: record.totalCalories,
       totalProtein: record.totalProtein,

@@ -1,11 +1,10 @@
 "use client";
 
 import { ScrollArea, Stack, Text } from "@mantine/core";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { DayGroup } from "@/components/history/DayGroup";
 import { MealEditModal } from "@/components/history/MealEditModal";
-import { MOCK_MEAL_RECORDS } from "@/lib/mock-data";
-import type { MealRecord } from "@/types";
+import type { MealCategory, MealRecord, NutritionAnalysis } from "@/types";
 
 function formatDateLabel(date: Date): string {
   const DOW = ["日", "月", "火", "水", "木", "金", "土"];
@@ -35,15 +34,46 @@ function groupByDate(
     }));
 }
 
+interface ApiMealRecord {
+  id: string;
+  mealCategory: MealCategory;
+  rawText: string;
+  analysis: NutritionAnalysis;
+  recordedAt: string;
+}
+
+function toMealRecord(r: ApiMealRecord): MealRecord {
+  return {
+    id: r.id,
+    mealCategory: r.mealCategory,
+    analysis: r.analysis,
+    recordedAt: new Date(r.recordedAt),
+  };
+}
+
 export default function HistoryPage() {
-  const [records, setRecords] = useState<MealRecord[]>(MOCK_MEAL_RECORDS);
+  const [records, setRecords] = useState<MealRecord[]>([]);
   const [editing, setEditing] = useState<MealRecord | null>(null);
 
-  const handleDelete = (id: string) => {
-    setRecords((prev) => prev.filter((r) => r.id !== id));
+  useEffect(() => {
+    fetch("/api/meals")
+      .then((r) => r.json())
+      .then((data: ApiMealRecord[]) => {
+        setRecords(data.map(toMealRecord));
+      })
+      .catch(() => {});
+  }, []);
+
+  const handleDelete = async (id: string) => {
+    try {
+      await fetch(`/api/meals/${id}`, { method: "DELETE" });
+      setRecords((prev) => prev.filter((r) => r.id !== id));
+    } catch {
+      // エラー時は状態を変更しない
+    }
   };
 
-  const handleSave = (
+  const handleSave = async (
     id: string,
     values: {
       totalCalories: number;
@@ -52,11 +82,19 @@ export default function HistoryPage() {
       totalCarbs: number;
     },
   ) => {
-    setRecords((prev) =>
-      prev.map((r) =>
-        r.id === id ? { ...r, analysis: { ...r.analysis, ...values } } : r,
-      ),
-    );
+    try {
+      const res = await fetch(`/api/meals/${id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(values),
+      });
+      const updated: ApiMealRecord = await res.json();
+      setRecords((prev) =>
+        prev.map((r) => (r.id === id ? toMealRecord(updated) : r)),
+      );
+    } catch {
+      // エラー時は状態を変更しない
+    }
   };
 
   const groups = groupByDate(records);

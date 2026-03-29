@@ -31,13 +31,13 @@ const FOOD_KEYWORDS = [
   "カロリー",
 ];
 
-function detectType(text: string): MessageType {
+export function detectType(text: string): MessageType {
   if (WEIGHT_REGEX.test(text)) return "weight";
   if (FOOD_KEYWORDS.some((kw) => text.includes(kw))) return "meal";
   return "off-topic";
 }
 
-function detectCategory(text: string): MealCategory {
+export function detectCategory(text: string): MealCategory {
   for (const [keywords, category] of MEAL_CATEGORY_RULES) {
     if (keywords.some((kw) => text.includes(kw))) return category;
   }
