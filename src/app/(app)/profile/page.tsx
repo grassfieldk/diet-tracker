@@ -64,9 +64,15 @@ function toBirthDate(
   return date;
 }
 
+// タブ切り替え時の再フェッチを防ぐモジュールレベルキャッシュ
+let cachedProfile: UserProfile | null | undefined;
+let cachedLatestWeight: number | null | undefined;
+
 export default function ProfilePage() {
   const [saving, setSaving] = useState(false);
-  const [latestWeight, setLatestWeight] = useState<number | null>(null);
+  const [latestWeight, setLatestWeight] = useState<number | null>(
+    cachedLatestWeight ?? null,
+  );
   const { setColorScheme } = useMantineColorScheme();
   const colorScheme = useComputedColorScheme("light");
 
@@ -114,10 +120,9 @@ export default function ProfilePage() {
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: 初回のみ取得
   useEffect(() => {
-    fetch("/api/user/profile")
-      .then((r) => r.json())
-      .then((data: UserProfile | null) => {
-        if (!data) return;
+    if (cachedProfile !== undefined) {
+      const data = cachedProfile;
+      if (data) {
         const bd = data.birthDate ? new Date(data.birthDate) : null;
         form.setValues({
           heightCm: data.heightCm ?? "",
@@ -129,17 +134,38 @@ export default function ProfilePage() {
           bmr: data.bmr ?? "",
           tdee: data.tdee ?? "",
         });
-      })
-      .catch(() => {});
+      }
+    } else {
+      fetch("/api/user/profile")
+        .then((r) => r.json())
+        .then((data: UserProfile | null) => {
+          cachedProfile = data;
+          if (!data) return;
+          const bd = data.birthDate ? new Date(data.birthDate) : null;
+          form.setValues({
+            heightCm: data.heightCm ?? "",
+            birthYear: bd ? bd.getFullYear() : "",
+            birthMonth: bd ? bd.getMonth() + 1 : "",
+            birthDay: bd ? bd.getDate() : "",
+            sex: data.sex ?? "male",
+            activityLevel: (data.activityLevel as ActivityLevel) ?? "sedentary",
+            bmr: data.bmr ?? "",
+            tdee: data.tdee ?? "",
+          });
+        })
+        .catch(() => {});
+    }
 
-    fetch("/api/weights?days=3650")
-      .then((r) => r.json())
-      .then((data: { weight: number; recordedAt: string }[]) => {
-        if (data.length > 0) {
-          setLatestWeight(data[data.length - 1].weight);
-        }
-      })
-      .catch(() => {});
+    if (cachedLatestWeight === undefined) {
+      fetch("/api/weights?days=3650")
+        .then((r) => r.json())
+        .then((data: { weight: number; recordedAt: string }[]) => {
+          const w = data.length > 0 ? data[data.length - 1].weight : null;
+          cachedLatestWeight = w;
+          setLatestWeight(w);
+        })
+        .catch(() => {});
+    }
   }, []);
 
   const birthDate = toBirthDate(
@@ -177,6 +203,17 @@ export default function ProfilePage() {
           tdee: values.tdee !== "" ? Number(values.tdee) : null,
         }),
       });
+      // キャッシュを更新
+      cachedProfile = {
+        heightCm: values.heightCm !== "" ? Number(values.heightCm) : 0,
+        weightKg: latestWeight ?? 0,
+        age: 0,
+        birthDate: bd ? bd.toISOString() : undefined,
+        sex: values.sex,
+        activityLevel: values.activityLevel,
+        bmr: values.bmr !== "" ? Number(values.bmr) : 0,
+        tdee: values.tdee !== "" ? Number(values.tdee) : undefined,
+      };
       notifications.show({
         message: "プロフィールを保存しました",
         color: "green",
