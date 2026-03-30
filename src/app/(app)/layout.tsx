@@ -24,6 +24,7 @@ import {
   IconMoon,
   IconScale,
   IconSun,
+  IconUser,
 } from "@tabler/icons-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -128,11 +129,26 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                   </Stack>
                 </UnstyledButton>
               ))}
-              <UnstyledButton onClick={openLogout} style={{ flex: 1 }}>
+              <UnstyledButton
+                component={Link}
+                href="/profile"
+                style={{ flex: 1 }}
+              >
                 <Stack gap={2} align="center">
-                  <IconLogout size={22} color="var(--mantine-color-dimmed)" />
-                  <Text size="xs" c="dimmed">
-                    ログアウト
+                  <IconUser
+                    size={22}
+                    color={
+                      pathname === "/profile"
+                        ? "var(--mantine-color-blue-6)"
+                        : "var(--mantine-color-dimmed)"
+                    }
+                  />
+                  <Text
+                    size="xs"
+                    c={pathname === "/profile" ? "blue" : "dimmed"}
+                    fw={pathname === "/profile" ? 600 : 400}
+                  >
+                    マイページ
                   </Text>
                 </Stack>
               </UnstyledButton>
@@ -172,14 +188,24 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           </AppShellSection>
           <AppShellSection grow />
           <AppShellSection>
-            <Group justify="space-between">
+            <Stack gap={4}>
               <NavLink
-                onClick={openLogout}
-                label="ログアウト"
-                leftSection={<IconLogout size={18} />}
+                component={Link}
+                href="/profile"
+                label="マイページ"
+                leftSection={<IconUser size={18} />}
+                active={pathname === "/profile"}
+                onClick={close}
               />
-              <ColorSchemeToggle />
-            </Group>
+              <Group justify="space-between">
+                <NavLink
+                  onClick={openLogout}
+                  label="ログアウト"
+                  leftSection={<IconLogout size={18} />}
+                />
+                <ColorSchemeToggle />
+              </Group>
+            </Stack>
           </AppShellSection>
         </AppShellNavbar>
         <AppShellMain
