@@ -152,12 +152,13 @@ export default function HomePage() {
       } = await analyzeRes.json();
 
       if (analyzed.type === "meal" && analyzed.analysis) {
+        const nutritionAnalysis = analyzed.analysis as NutritionAnalysis;
         const saveRes = await fetch("/api/meals", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             mealCategory: analyzed.mealCategory,
-            analysis: analyzed.analysis,
+            analysis: nutritionAnalysis,
             rawText: text,
             recordedDate: todayString(),
           }),
@@ -169,7 +170,7 @@ export default function HomePage() {
           id: saved.id ?? bid,
           type: "meal",
           mealCategory: analyzed.mealCategory,
-          analysis: analyzed.analysis,
+          analysis: nutritionAnalysis,
           createdAt,
         };
         setItems((prev) => {

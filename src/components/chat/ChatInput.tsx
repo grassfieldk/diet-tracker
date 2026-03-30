@@ -70,7 +70,6 @@ export function ChatInput({ onSend, disabled = false }: ChatInputProps) {
             onKeyDown={(e) => {
               if (e.key === "Enter") e.preventDefault();
             }}
-            precision={1}
             step={0.1}
             min={20}
             max={300}
