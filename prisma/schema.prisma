@@ -26,8 +26,9 @@ model User {
   tdee          Float?    // 計算済み活動代謝量 (kcal)
   activityLevel String?   // "sedentary" | "light" | "moderate" | "active" | "very_active"
 
-  mealRecords   MealRecord[]
-  weightRecords WeightRecord[]
+  mealRecords     MealRecord[]
+  weightRecords   WeightRecord[]
+  exerciseRecords ExerciseRecord[]
 }
 
 model MealRecord {
@@ -64,4 +65,20 @@ model WeightRecord {
   weight Float // kg
 
   @@index([userId, recordedAt])
+}
+
+model ExerciseRecord {
+  id           String   @id @default(cuid())
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  recordedDate DateTime @db.Date
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  rawText             String?
+  analysisJson        Json
+  totalCaloriesBurned Float
+
+  @@index([userId, recordedDate])
 }

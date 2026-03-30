@@ -10,6 +10,8 @@ import { PageLayout } from "@/components/layout/PageLayout";
 import type {
   BotChatItem,
   ChatItem,
+  ExerciseAnalysis,
+  InputMode,
   MealCategory,
   NutritionAnalysis,
   UserChatItem,
@@ -48,20 +50,28 @@ export default function HomePage() {
       })
       .catch(() => {});
 
-    fetch(`/api/meals?limit=${INITIAL_LOAD_LIMIT}`)
-      .then((r) => r.json())
+    Promise.all([
+      fetch(`/api/meals?limit=${INITIAL_LOAD_LIMIT}`).then((r) => r.json()),
+      fetch(`/api/exercises?date=${todayString()}`).then((r) => r.json()),
+    ])
       .then(
-        (
-          data: Array<{
+        ([mealData, exerciseData]: [
+          Array<{
             id: string;
             mealCategory: MealCategory;
             rawText: string;
             analysis: NutritionAnalysis;
             recordedAt: string;
           }>,
-        ) => {
+          Array<{
+            id: string;
+            rawText: string;
+            analysis: ExerciseAnalysis;
+            recordedAt: string;
+          }>,
+        ]) => {
           const loaded: ChatItem[] = [];
-          for (const record of data) {
+          for (const record of mealData) {
             loaded.push({
               kind: "user",
               id: `user-${record.id}`,
@@ -77,6 +87,22 @@ export default function HomePage() {
               createdAt: new Date(record.recordedAt),
             });
           }
+          for (const record of exerciseData) {
+            loaded.push({
+              kind: "user",
+              id: `user-${record.id}`,
+              text: record.rawText,
+              createdAt: new Date(record.recordedAt),
+            });
+            loaded.push({
+              kind: "bot",
+              id: record.id,
+              type: "exercise",
+              exerciseAnalysis: record.analysis,
+              createdAt: new Date(record.recordedAt),
+            });
+          }
+          loaded.sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
           cachedItems = loaded;
           setItems(loaded);
           setLoading(false);
@@ -92,7 +118,7 @@ export default function HomePage() {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [items]);
 
-  const handleSend = async (text: string) => {
+  const handleSend = async (text: string, mode: InputMode) => {
     const uid = `user-${Date.now()}`;
     const bid = `bot-${Date.now()}`;
     const createdAt = new Date();
@@ -116,12 +142,12 @@ export default function HomePage() {
       const analyzeRes = await fetch("/api/analyze", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text }),
+        body: JSON.stringify({ text, mode }),
       });
       const analyzed: {
-        type: "meal" | "weight" | "off-topic";
+        type: "meal" | "weight" | "exercise" | "off-topic";
         mealCategory?: MealCategory;
-        analysis?: NutritionAnalysis;
+        analysis?: NutritionAnalysis | ExerciseAnalysis;
         weightKg?: number;
       } = await analyzeRes.json();
 
@@ -144,6 +170,31 @@ export default function HomePage() {
           type: "meal",
           mealCategory: analyzed.mealCategory,
           analysis: analyzed.analysis,
+          createdAt,
+        };
+        setItems((prev) => {
+          const next = prev.map((item) => (item.id === bid ? botItem : item));
+          cachedItems = next;
+          return next;
+        });
+      } else if (analyzed.type === "exercise" && analyzed.analysis) {
+        const exerciseAnalysis = analyzed.analysis as ExerciseAnalysis;
+        const saveRes = await fetch("/api/exercises", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            analysis: exerciseAnalysis,
+            rawText: text,
+            recordedDate: todayString(),
+          }),
+        });
+        const saved: { id: string } = await saveRes.json();
+
+        const botItem: BotChatItem = {
+          kind: "bot",
+          id: saved.id ?? bid,
+          type: "exercise",
+          exerciseAnalysis,
           createdAt,
         };
         setItems((prev) => {

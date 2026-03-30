@@ -16,7 +16,20 @@ export interface NutritionAnalysis {
   notes?: string;
 }
 
-export type MessageType = "meal" | "weight" | "off-topic";
+export interface ExerciseItem {
+  name: string;
+  duration: number; // 分
+  caloriesBurned: number;
+}
+
+export interface ExerciseAnalysis {
+  exercises: ExerciseItem[];
+  totalCaloriesBurned: number;
+  notes?: string;
+}
+
+export type MessageType = "meal" | "weight" | "exercise" | "off-topic";
+export type InputMode = "meal" | "weight" | "exercise";
 
 export type MealCategory = "朝食" | "昼食" | "夕食" | "間食";
 
@@ -31,7 +44,12 @@ export interface UserChatItem {
 }
 
 /** AI / システムの返答 */
-export type BotResponseType = "meal" | "weight" | "off-topic" | "pending";
+export type BotResponseType =
+  | "meal"
+  | "weight"
+  | "exercise"
+  | "off-topic"
+  | "pending";
 
 export interface BotChatItem {
   kind: "bot";
@@ -40,6 +58,7 @@ export interface BotChatItem {
   mealCategory?: MealCategory;
   analysis?: NutritionAnalysis;
   weightKg?: number;
+  exerciseAnalysis?: ExerciseAnalysis;
   createdAt: Date;
 }
 
@@ -62,6 +81,14 @@ export interface MealRecord {
   id: string;
   mealCategory: MealCategory;
   analysis: NutritionAnalysis;
+  recordedAt: Date;
+}
+
+/** 履歴画面で扱う運動記録 */
+export interface ExerciseRecord {
+  id: string;
+  rawText: string;
+  analysis: ExerciseAnalysis;
   recordedAt: Date;
 }
 

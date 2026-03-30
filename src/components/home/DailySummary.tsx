@@ -115,6 +115,14 @@ export function DailySummary({
       item.createdAt.toDateString() === todayStr,
   );
 
+  const todayBotExercises = items.filter(
+    (item): item is BotChatItem =>
+      item.kind === "bot" &&
+      item.type === "exercise" &&
+      item.exerciseAnalysis != null &&
+      item.createdAt.toDateString() === todayStr,
+  );
+
   const totalCalories = todayBotMeals.reduce(
     (sum, m) => sum + (m.analysis?.totalCalories ?? 0),
     0,
@@ -131,10 +139,14 @@ export function DailySummary({
     (sum, m) => sum + (m.analysis?.totalCarbs ?? 0),
     0,
   );
+  const totalBurned = todayBotExercises.reduce(
+    (sum, e) => sum + (e.exerciseAnalysis?.totalCaloriesBurned ?? 0),
+    0,
+  );
 
   const bmrDiff =
     profile && profile.bmr != null
-      ? Math.round(totalCalories - profile.bmr)
+      ? Math.round(totalCalories - totalBurned - profile.bmr)
       : null;
 
   return (
@@ -151,8 +163,24 @@ export function DailySummary({
             </Group>
           </Group>
 
+          {totalBurned > 0 && (
+            <Group align="baseline" justify="space-between" gap={4}>
+              <Text size="xs" c="teal">
+                運動消費
+              </Text>
+              <Group align="baseline" gap={4}>
+                <Text size="sm" fw={600} c="teal">
+                  -{totalBurned.toLocaleString()}
+                </Text>
+                <Text size="xs" c="teal">
+                  kcal
+                </Text>
+              </Group>
+            </Group>
+          )}
+
           {profile !== null && profile.bmr != null && bmrDiff !== null && (
-            <BmrBar consumed={totalCalories} bmr={profile.bmr} />
+            <BmrBar consumed={totalCalories - totalBurned} bmr={profile.bmr} />
           )}
 
           {profile === null && (

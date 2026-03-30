@@ -1,5 +1,5 @@
 import { Box, Group, Loader, Paper, Stack, Table, Text } from "@mantine/core";
-import { IconSalad, IconScale } from "@tabler/icons-react";
+import { IconFlame, IconSalad, IconScale } from "@tabler/icons-react";
 import type { BotChatItem } from "@/types";
 
 interface BotBubbleProps {
@@ -68,6 +68,50 @@ export function BotBubble({ item }: BotBubbleProps) {
               {item.analysis.notes && (
                 <Text size="xs" c="dimmed">
                   {item.analysis.notes}
+                </Text>
+              )}
+            </Stack>
+          </Paper>
+        )}
+
+        {item.type === "exercise" && item.exerciseAnalysis && (
+          <Paper
+            p="sm"
+            withBorder
+            radius="md"
+            style={{ borderTopLeftRadius: 4 }}
+          >
+            <Stack gap={8}>
+              <Group gap={6}>
+                <IconFlame size={16} color="var(--mantine-color-teal-6)" />
+                <Text size="sm">
+                  {item.exerciseAnalysis.totalCaloriesBurned.toLocaleString()}
+                  kcal 消費しました
+                </Text>
+              </Group>
+
+              <Table verticalSpacing={2} fz="xs" withColumnBorders={false}>
+                <Table.Thead>
+                  <Table.Tr>
+                    <Table.Th>運動</Table.Th>
+                    <Table.Th ta="center">時間</Table.Th>
+                    <Table.Th ta="center">消費kcal</Table.Th>
+                  </Table.Tr>
+                </Table.Thead>
+                <Table.Tbody>
+                  {item.exerciseAnalysis.exercises.map((ex, i) => (
+                    <Table.Tr key={`${ex.name}-${i}`}>
+                      <Table.Td>{ex.name}</Table.Td>
+                      <Table.Td ta="center">{ex.duration}分</Table.Td>
+                      <Table.Td ta="center">{ex.caloriesBurned}</Table.Td>
+                    </Table.Tr>
+                  ))}
+                </Table.Tbody>
+              </Table>
+
+              {item.exerciseAnalysis.notes && (
+                <Text size="xs" c="dimmed">
+                  {item.exerciseAnalysis.notes}
                 </Text>
               )}
             </Stack>

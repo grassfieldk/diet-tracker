@@ -4,7 +4,13 @@ import { Loader, ScrollArea, Stack, Text } from "@mantine/core";
 import { useEffect, useState } from "react";
 import { DayGroup } from "@/components/history/DayGroup";
 import { MealEditModal } from "@/components/history/MealEditModal";
-import type { MealCategory, MealRecord, NutritionAnalysis } from "@/types";
+import type {
+  ExerciseAnalysis,
+  ExerciseRecord,
+  MealCategory,
+  MealRecord,
+  NutritionAnalysis,
+} from "@/types";
 
 function formatDateLabel(date: Date): string {
   const DOW = ["日", "月", "火", "水", "木", "金", "土"];
@@ -16,22 +22,47 @@ function formatDateLabel(date: Date): string {
 }
 
 function groupByDate(
-  records: MealRecord[],
-): { label: string; key: string; records: MealRecord[] }[] {
-  const map = new Map<string, MealRecord[]>();
-  for (const record of records) {
+  meals: MealRecord[],
+  exercises: ExerciseRecord[],
+): {
+  label: string;
+  key: string;
+  meals: MealRecord[];
+  exercises: ExerciseRecord[];
+}[] {
+  const keys = new Set<string>();
+  const mealMap = new Map<string, MealRecord[]>();
+  const exerciseMap = new Map<string, ExerciseRecord[]>();
+
+  for (const record of meals) {
     const d = record.recordedAt;
     const key = `${d.getFullYear()}/${String(d.getMonth() + 1).padStart(2, "0")}/${String(d.getDate()).padStart(2, "0")}`;
-    if (!map.has(key)) map.set(key, []);
-    map.get(key)?.push(record);
+    keys.add(key);
+    if (!mealMap.has(key)) mealMap.set(key, []);
+    mealMap.get(key)?.push(record);
   }
-  return Array.from(map.entries())
-    .sort(([a], [b]) => b.localeCompare(a))
-    .map(([key, recs]) => ({
-      key,
-      label: formatDateLabel(recs[0].recordedAt),
-      records: recs,
-    }));
+  for (const record of exercises) {
+    const d = record.recordedAt;
+    const key = `${d.getFullYear()}/${String(d.getMonth() + 1).padStart(2, "0")}/${String(d.getDate()).padStart(2, "0")}`;
+    keys.add(key);
+    if (!exerciseMap.has(key)) exerciseMap.set(key, []);
+    exerciseMap.get(key)?.push(record);
+  }
+
+  return Array.from(keys)
+    .sort((a, b) => b.localeCompare(a))
+    .map((key) => {
+      const recs = mealMap.get(key) ?? [];
+      const execs = exerciseMap.get(key) ?? [];
+      const firstDate =
+        recs[0]?.recordedAt ?? execs[0]?.recordedAt ?? new Date();
+      return {
+        key,
+        label: formatDateLabel(firstDate),
+        meals: recs,
+        exercises: execs,
+      };
+    });
 }
 
 interface ApiMealRecord {
@@ -39,6 +70,13 @@ interface ApiMealRecord {
   mealCategory: MealCategory;
   rawText: string;
   analysis: NutritionAnalysis;
+  recordedAt: string;
+}
+
+interface ApiExerciseRecord {
+  id: string;
+  rawText: string;
+  analysis: ExerciseAnalysis;
   recordedAt: string;
 }
 
@@ -51,28 +89,63 @@ function toMealRecord(r: ApiMealRecord): MealRecord {
   };
 }
 
+function toExerciseRecord(r: ApiExerciseRecord): ExerciseRecord {
+  return {
+    id: r.id,
+    rawText: r.rawText,
+    analysis: r.analysis,
+    recordedAt: new Date(r.recordedAt),
+  };
+}
+
 // モジュールレベルキャッシュ
 let cachedRecords: MealRecord[] | null = null;
+let cachedExercises: ExerciseRecord[] | null = null;
 
 export default function HistoryPage() {
   const [records, setRecords] = useState<MealRecord[]>(cachedRecords ?? []);
-  const [loading, setLoading] = useState(cachedRecords === null);
+  const [exercises, setExercises] = useState<ExerciseRecord[]>(
+    cachedExercises ?? [],
+  );
+  const [loading, setLoading] = useState(
+    cachedRecords === null || cachedExercises === null,
+  );
   const [editing, setEditing] = useState<MealRecord | null>(null);
 
   useEffect(() => {
-    if (cachedRecords !== null) return;
-    fetch("/api/meals")
-      .then((r) => r.json())
-      .then((data: ApiMealRecord[]) => {
-        const converted = data.map(toMealRecord);
-        cachedRecords = converted;
-        setRecords(converted);
-        setLoading(false);
-      })
+    if (cachedRecords !== null && cachedExercises !== null) return;
+    Promise.all([
+      fetch("/api/meals").then((r) => r.json()),
+      fetch("/api/exercises").then((r) => r.json()),
+    ])
+      .then(
+        ([mealData, exerciseData]: [ApiMealRecord[], ApiExerciseRecord[]]) => {
+          const convertedMeals = mealData.map(toMealRecord);
+          const convertedExercises = exerciseData.map(toExerciseRecord);
+          cachedRecords = convertedMeals;
+          cachedExercises = convertedExercises;
+          setRecords(convertedMeals);
+          setExercises(convertedExercises);
+          setLoading(false);
+        },
+      )
       .catch(() => {
         setLoading(false);
       });
   }, []);
+
+  const handleDeleteExercise = async (id: string) => {
+    try {
+      await fetch(`/api/exercises/${id}`, { method: "DELETE" });
+      setExercises((prev) => {
+        const next = prev.filter((r) => r.id !== id);
+        cachedExercises = next;
+        return next;
+      });
+    } catch {
+      // エラー時は状態を変更しない
+    }
+  };
 
   const handleDelete = async (id: string) => {
     try {
@@ -113,7 +186,7 @@ export default function HistoryPage() {
     }
   };
 
-  const groups = groupByDate(records);
+  const groups = groupByDate(records, exercises);
 
   return (
     <>
@@ -130,9 +203,11 @@ export default function HistoryPage() {
               <DayGroup
                 key={g.key}
                 dateLabel={g.label}
-                records={g.records}
+                meals={g.meals}
+                exercises={g.exercises}
                 onEdit={setEditing}
                 onDelete={handleDelete}
+                onDeleteExercise={handleDeleteExercise}
               />
             ))
           )}

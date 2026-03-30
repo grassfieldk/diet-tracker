@@ -18,12 +18,13 @@ import {
   IconChevronUp,
   IconCoffee,
   IconEdit,
+  IconFlame,
   IconMoon,
   IconSun,
   IconTrash,
 } from "@tabler/icons-react";
 import { PfcBar } from "@/components/common/PfcBar";
-import type { MealCategory, MealRecord } from "@/types";
+import type { ExerciseRecord, MealCategory, MealRecord } from "@/types";
 
 const CATEGORY_COLOR: Record<MealCategory, string> = {
   朝食: "orange",
@@ -198,26 +199,126 @@ function MealRecordRow({
   );
 }
 
+interface ExerciseRecordRowProps {
+  record: ExerciseRecord;
+  onDelete: (id: string) => void;
+}
+
+function ExerciseRecordRow({ record, onDelete }: ExerciseRecordRowProps) {
+  const [expanded, { toggle }] = useDisclosure(false);
+  const { analysis } = record;
+
+  return (
+    <Paper
+      withBorder
+      radius="sm"
+      p="sm"
+      onClick={toggle}
+      style={{ cursor: "pointer" }}
+    >
+      <Stack gap={6}>
+        <Group justify="space-between" wrap="nowrap">
+          <Group gap={8} wrap="nowrap" style={{ minWidth: 0 }}>
+            <Badge
+              size="xs"
+              color="teal"
+              variant="light"
+              style={{ flexShrink: 0 }}
+              leftSection={<IconFlame size={10} />}
+            >
+              運動
+            </Badge>
+            <Text size="sm" style={{ wordBreak: "break-word" }}>
+              {analysis.exercises.map((e) => e.name).join("、")}
+            </Text>
+          </Group>
+          <Group gap={4} style={{ flexShrink: 0 }}>
+            <ActionIcon
+              size="sm"
+              variant="subtle"
+              color="red"
+              onClick={(e) => {
+                e.stopPropagation();
+                onDelete(record.id);
+              }}
+              aria-label="削除"
+            >
+              <IconTrash size={14} />
+            </ActionIcon>
+            {expanded ? (
+              <IconChevronUp size={14} style={{ flexShrink: 0 }} />
+            ) : (
+              <IconChevronDown size={14} style={{ flexShrink: 0 }} />
+            )}
+          </Group>
+        </Group>
+
+        <Text size="xs" c="teal" fw={600}>
+          消費: {analysis.totalCaloriesBurned.toLocaleString()} kcal
+        </Text>
+
+        <Collapse in={expanded}>
+          <Box pt={4}>
+            <Table fz="xs" verticalSpacing={2} withColumnBorders={false}>
+              <Table.Thead>
+                <Table.Tr
+                  style={{
+                    borderBottom:
+                      "2px solid var(--mantine-color-default-border)",
+                  }}
+                >
+                  <Table.Th>運動</Table.Th>
+                  <Table.Th ta="center">時間(min)</Table.Th>
+                  <Table.Th ta="center">kcal</Table.Th>
+                </Table.Tr>
+              </Table.Thead>
+              <Table.Tbody>
+                {analysis.exercises.map((ex, i) => (
+                  <Table.Tr key={`${ex.name}-${i}`}>
+                    <Table.Td>{ex.name}</Table.Td>
+                    <Table.Td ta="center">{ex.duration}</Table.Td>
+                    <Table.Td ta="center">{ex.caloriesBurned}</Table.Td>
+                  </Table.Tr>
+                ))}
+              </Table.Tbody>
+            </Table>
+            {analysis.notes && (
+              <Text size="xs" c="dimmed" mt={4}>
+                {analysis.notes}
+              </Text>
+            )}
+          </Box>
+        </Collapse>
+      </Stack>
+    </Paper>
+  );
+}
+
 interface DayGroupProps {
   dateLabel: string;
-  records: MealRecord[];
+  meals: MealRecord[];
+  exercises: ExerciseRecord[];
   onEdit: (record: MealRecord) => void;
   onDelete: (id: string) => void;
+  onDeleteExercise: (id: string) => void;
 }
 
 export function DayGroup({
   dateLabel,
-  records,
+  meals,
+  exercises,
   onEdit,
   onDelete,
+  onDeleteExercise,
 }: DayGroupProps) {
-  const totalCalories = records.reduce(
-    (s, r) => s + r.analysis.totalCalories,
+  const totalCalories = meals.reduce((s, r) => s + r.analysis.totalCalories, 0);
+  const totalProtein = meals.reduce((s, r) => s + r.analysis.totalProtein, 0);
+  const totalFat = meals.reduce((s, r) => s + r.analysis.totalFat, 0);
+  const totalCarbs = meals.reduce((s, r) => s + r.analysis.totalCarbs, 0);
+  const totalBurned = exercises.reduce(
+    (s, r) => s + r.analysis.totalCaloriesBurned,
     0,
   );
-  const totalProtein = records.reduce((s, r) => s + r.analysis.totalProtein, 0);
-  const totalFat = records.reduce((s, r) => s + r.analysis.totalFat, 0);
-  const totalCarbs = records.reduce((s, r) => s + r.analysis.totalCarbs, 0);
 
   return (
     <Stack gap="xs">
@@ -233,6 +334,11 @@ export function DayGroup({
           </Text>
           <Group gap={12}>
             <Text size="sm">{totalCalories.toLocaleString()} kcal</Text>
+            {totalBurned > 0 && (
+              <Text size="sm" c="teal">
+                消費 −{totalBurned.toLocaleString()} kcal
+              </Text>
+            )}
             <Text size="xs" c="dimmed">
               P {Math.round(totalProtein * 10) / 10}g　F{" "}
               {Math.round(totalFat * 10) / 10}g　C{" "}
@@ -242,13 +348,13 @@ export function DayGroup({
         </Group>
       </Paper>
       <Stack gap={0}>
-        {records.map((record, i) => {
+        {meals.map((record, i) => {
           const position =
-            records.length === 1
+            meals.length === 1
               ? "only"
               : i === 0
                 ? "first"
-                : i === records.length - 1
+                : i === meals.length - 1
                   ? "last"
                   : "middle";
           return (
@@ -262,6 +368,17 @@ export function DayGroup({
           );
         })}
       </Stack>
+      {exercises.length > 0 && (
+        <Stack gap={4}>
+          {exercises.map((record) => (
+            <ExerciseRecordRow
+              key={record.id}
+              record={record}
+              onDelete={onDeleteExercise}
+            />
+          ))}
+        </Stack>
+      )}
     </Stack>
   );
 }
