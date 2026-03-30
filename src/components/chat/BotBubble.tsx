@@ -1,5 +1,5 @@
 import { Box, Group, Loader, Paper, Stack, Table, Text } from "@mantine/core";
-import { IconScale } from "@tabler/icons-react";
+import { IconSalad, IconScale } from "@tabler/icons-react";
 import type { BotChatItem } from "@/types";
 
 interface BotBubbleProps {
@@ -30,9 +30,13 @@ export function BotBubble({ item }: BotBubbleProps) {
             style={{ borderTopLeftRadius: 4 }}
           >
             <Stack gap={8}>
-              <Text size="sm" fw={600}>
-                合計 {item.analysis.totalCalories.toLocaleString()} kcal
-              </Text>
+              <Group gap={6}>
+                <IconSalad size={16} />
+                <Text size="sm">
+                  合計 {item.analysis.totalCalories.toLocaleString()}kcal
+                  を記録しました
+                </Text>
+              </Group>
 
               <Box style={{ overflowX: "auto" }}>
                 <Table verticalSpacing={2} fz="xs" withColumnBorders={false}>
@@ -80,7 +84,7 @@ export function BotBubble({ item }: BotBubbleProps) {
           >
             <Group gap={6}>
               <IconScale size={16} />
-              <Text size="sm">体重 {item.weightKg} kg を記録しました</Text>
+              <Text size="sm">体重 {item.weightKg}kg を記録しました</Text>
             </Group>
           </Paper>
         )}

@@ -10,12 +10,23 @@ interface ChatHistoryProps {
 
 function formatDateBadge(date: Date): string {
   const today = new Date();
+  const yesterday = new Date(today);
+  yesterday.setDate(yesterday.getDate() - 1);
+
   if (
     date.getFullYear() === today.getFullYear() &&
     date.getMonth() === today.getMonth() &&
     date.getDate() === today.getDate()
   ) {
     return "今日";
+  }
+
+  if (
+    date.getFullYear() === yesterday.getFullYear() &&
+    date.getMonth() === yesterday.getMonth() &&
+    date.getDate() === yesterday.getDate()
+  ) {
+    return "昨日";
   }
   const y = date.getFullYear();
   const m = String(date.getMonth() + 1).padStart(2, "0");
