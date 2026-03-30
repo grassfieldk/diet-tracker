@@ -17,11 +17,14 @@ model User {
   updatedAt DateTime @updatedAt
 
   // プロフィール
-  height Float? // cm
-  weight Float? // kg（最新体重。WeightRecord とは別途保持）
-  age    Int?
-  gender String? // "male" | "female" | "other"
-  bmr    Float? // 計算済み基礎代謝 (kcal)
+  height        Float?  // cm
+  weight        Float?  // kg（最新体重。WeightRecord とは別途保持）
+  age           Int?
+  birthDate     DateTime? // 誕生日
+  gender        String?   // "male" | "female" | "other"
+  bmr           Float?    // 計算済み基礎代謝 (kcal)
+  tdee          Float?    // 計算済み活動代謝量 (kcal)
+  activityLevel String?   // "sedentary" | "light" | "moderate" | "active" | "very_active"
 
   mealRecords   MealRecord[]
   weightRecords WeightRecord[]

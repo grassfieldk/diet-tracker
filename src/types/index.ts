@@ -74,10 +74,20 @@ export interface WeightRecord {
 
 export type Sex = "male" | "female";
 
+export type ActivityLevel =
+  | "sedentary"
+  | "light"
+  | "moderate"
+  | "active"
+  | "very_active";
+
 export interface UserProfile {
   heightCm: number;
   weightKg: number;
   age: number;
+  birthDate?: string; // ISO date string
   sex: Sex;
   bmr: number;
+  tdee?: number;
+  activityLevel?: ActivityLevel;
 }

@@ -5,9 +5,12 @@ import {
   Button,
   Divider,
   Group,
+  Input,
   NumberInput,
   Paper,
   SegmentedControl,
+  Select,
+  SimpleGrid,
   Stack,
   Switch,
   Text,
@@ -16,43 +19,95 @@ import {
 } from "@mantine/core";
 import { useForm } from "@mantine/form";
 import { notifications } from "@mantine/notifications";
-import { IconLogout, IconMoon, IconSun } from "@tabler/icons-react";
+import {
+  IconCalculator,
+  IconLogout,
+  IconMoon,
+  IconSun,
+} from "@tabler/icons-react";
 import { useEffect, useState } from "react";
-import { calculateBmr } from "@/lib/bmr";
-import type { Sex, UserProfile } from "@/types";
+import {
+  ACTIVITY_LEVELS,
+  ageFromBirthDate,
+  calculateBmr,
+  calculateTdee,
+} from "@/lib/bmr";
+import type { ActivityLevel, Sex, UserProfile } from "@/types";
 
 interface FormValues {
   heightCm: number | string;
-  weightKg: number | string;
-  age: number | string;
+  birthYear: number | string;
+  birthMonth: number | string;
+  birthDay: number | string;
   sex: Sex;
+  activityLevel: ActivityLevel;
+  bmr: number | string;
+  tdee: number | string;
+}
+
+function toBirthDate(
+  year: number | string,
+  month: number | string,
+  day: number | string,
+): Date | null {
+  const y = Number(year);
+  const m = Number(month);
+  const d = Number(day);
+  if (!y || !m || !d) return null;
+  const date = new Date(y, m - 1, d);
+  if (
+    date.getFullYear() !== y ||
+    date.getMonth() !== m - 1 ||
+    date.getDate() !== d
+  )
+    return null;
+  return date;
 }
 
 export default function ProfilePage() {
   const [saving, setSaving] = useState(false);
-  const [bmr, setBmr] = useState<number | null>(null);
+  const [latestWeight, setLatestWeight] = useState<number | null>(null);
   const { setColorScheme } = useMantineColorScheme();
   const colorScheme = useComputedColorScheme("light");
 
   const form = useForm<FormValues>({
     initialValues: {
       heightCm: "",
-      weightKg: "",
-      age: "",
+      birthYear: "",
+      birthMonth: "",
+      birthDay: "",
       sex: "male",
+      activityLevel: "sedentary",
+      bmr: "",
+      tdee: "",
     },
     validate: {
       heightCm: (v) =>
         v === "" || Number(v) < 100 || Number(v) > 250
           ? "100〜250 cm で入力してください"
           : null,
-      weightKg: (v) =>
-        v === "" || Number(v) < 30 || Number(v) > 300
-          ? "30〜300 kg で入力してください"
+      birthYear: (v) =>
+        v !== "" && (Number(v) < 1900 || Number(v) > new Date().getFullYear())
+          ? "有効な年を入力してください"
           : null,
-      age: (v) =>
-        v === "" || Number(v) < 10 || Number(v) > 120
-          ? "10〜120 歳で入力してください"
+      birthMonth: (v) =>
+        v !== "" && (Number(v) < 1 || Number(v) > 12)
+          ? "1〜12 で入力してください"
+          : null,
+      birthDay: (v, values) => {
+        if (v === "") return null;
+        if (Number(v) < 1 || Number(v) > 31) return "1〜31 で入力してください";
+        const date = toBirthDate(values.birthYear, values.birthMonth, v);
+        if (!date) return "有効な日付ではありません";
+        return null;
+      },
+      bmr: (v) =>
+        v !== "" && (Number(v) < 500 || Number(v) > 5000)
+          ? "500〜5000 の範囲で入力してください"
+          : null,
+      tdee: (v) =>
+        v !== "" && (Number(v) < 500 || Number(v) > 10000)
+          ? "500〜10000 の範囲で入力してください"
           : null,
     },
   });
@@ -63,61 +118,75 @@ export default function ProfilePage() {
       .then((r) => r.json())
       .then((data: UserProfile | null) => {
         if (!data) return;
+        const bd = data.birthDate ? new Date(data.birthDate) : null;
         form.setValues({
           heightCm: data.heightCm ?? "",
-          weightKg: data.weightKg ?? "",
-          age: data.age ?? "",
+          birthYear: bd ? bd.getFullYear() : "",
+          birthMonth: bd ? bd.getMonth() + 1 : "",
+          birthDay: bd ? bd.getDate() : "",
           sex: data.sex ?? "male",
+          activityLevel: (data.activityLevel as ActivityLevel) ?? "sedentary",
+          bmr: data.bmr ?? "",
+          tdee: data.tdee ?? "",
         });
-        if (data.bmr) setBmr(data.bmr);
+      })
+      .catch(() => {});
+
+    fetch("/api/weights?days=3650")
+      .then((r) => r.json())
+      .then((data: { weight: number; recordedAt: string }[]) => {
+        if (data.length > 0) {
+          setLatestWeight(data[data.length - 1].weight);
+        }
       })
       .catch(() => {});
   }, []);
 
+  const birthDate = toBirthDate(
+    form.values.birthYear,
+    form.values.birthMonth,
+    form.values.birthDay,
+  );
+
+  const handleCalculate = () => {
+    const h = Number(form.values.heightCm);
+    if (!h || !birthDate || !latestWeight) return;
+    const age = ageFromBirthDate(birthDate);
+    const computedBmr = calculateBmr(h, latestWeight, age, form.values.sex);
+    const computedTdee = calculateTdee(computedBmr, form.values.activityLevel);
+    form.setValues({ ...form.values, bmr: computedBmr, tdee: computedTdee });
+  };
+
   const handleSubmit = async (values: FormValues) => {
-    const h = Number(values.heightCm);
-    const w = Number(values.weightKg);
-    const a = Number(values.age);
-    const computed = calculateBmr(h, w, a, values.sex);
     setSaving(true);
     try {
+      const bd = toBirthDate(
+        values.birthYear,
+        values.birthMonth,
+        values.birthDay,
+      );
       await fetch("/api/user/profile", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          heightCm: h,
-          weightKg: w,
-          age: a,
+          heightCm: values.heightCm !== "" ? Number(values.heightCm) : null,
+          birthDate: bd ? bd.toISOString() : null,
           sex: values.sex,
-          bmr: computed,
+          activityLevel: values.activityLevel,
+          bmr: values.bmr !== "" ? Number(values.bmr) : null,
+          tdee: values.tdee !== "" ? Number(values.tdee) : null,
         }),
       });
-      setBmr(computed);
       notifications.show({
         message: "プロフィールを保存しました",
         color: "green",
       });
     } catch {
-      notifications.show({
-        message: "保存に失敗しました",
-        color: "red",
-      });
+      notifications.show({ message: "保存に失敗しました", color: "red" });
     } finally {
       setSaving(false);
     }
   };
-
-  const previewBmr =
-    form.values.heightCm !== "" &&
-    form.values.weightKg !== "" &&
-    form.values.age !== ""
-      ? calculateBmr(
-          Number(form.values.heightCm),
-          Number(form.values.weightKg),
-          Number(form.values.age),
-          form.values.sex,
-        )
-      : null;
 
   return (
     <Stack gap="md">
@@ -129,77 +198,165 @@ export default function ProfilePage() {
               setColorScheme(colorScheme === "light" ? "dark" : "light")
             }
             size="md"
-            color={colorScheme === "dark" ? "gray.8" : "yellow"}
+            color={colorScheme === "dark" ? "gray.6" : "yellow"}
             onLabel={<IconSun size={14} />}
             offLabel={<IconMoon size={14} />}
             aria-label="カラースキーム切替"
           />
         </Group>
       </Box>
+
       <Paper withBorder p="md" radius="md">
-        <form onSubmit={form.onSubmit(handleSubmit)}>
+        <form
+          onSubmit={form.onSubmit(handleSubmit)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") e.preventDefault();
+          }}
+        >
           <Stack gap="md">
             <Text fw={600} size="sm">
               基本情報
             </Text>
 
-            <SegmentedControl
-              data={[
-                { label: "男性", value: "male" },
-                { label: "女性", value: "female" },
-              ]}
-              value={form.values.sex}
-              onChange={(v) => form.setFieldValue("sex", v as Sex)}
-              fullWidth
-            />
+            {/* 性別・誕生日 横並び（1:2） */}
+            <Group gap="md" align="flex-start" wrap="nowrap">
+              <Stack gap={6} style={{ flex: 1 }}>
+                <Text size="sm" fw={500}>
+                  性別
+                </Text>
+                <SegmentedControl
+                  data={[
+                    { label: "男", value: "male" },
+                    { label: "女", value: "female" },
+                  ]}
+                  value={form.values.sex}
+                  onChange={(v) => form.setFieldValue("sex", v as Sex)}
+                  fullWidth
+                />
+              </Stack>
+              <Input.Wrapper
+                label="誕生日"
+                style={{ flex: 2 }}
+                error={
+                  form.errors.birthYear ??
+                  form.errors.birthMonth ??
+                  form.errors.birthDay
+                }
+              >
+                <Group gap={4} mt={4} align="center" wrap="nowrap">
+                  <NumberInput
+                    placeholder="YYYY"
+                    hideControls
+                    min={1900}
+                    max={new Date().getFullYear()}
+                    style={{ width: 76 }}
+                    styles={{ input: { textAlign: "center" } }}
+                    aria-label="年"
+                    {...form.getInputProps("birthYear")}
+                    error={!!form.errors.birthYear}
+                  />
+                  <Text c="dimmed" size="sm">
+                    /
+                  </Text>
+                  <NumberInput
+                    placeholder="MM"
+                    hideControls
+                    min={1}
+                    max={12}
+                    style={{ width: 54 }}
+                    styles={{ input: { textAlign: "center" } }}
+                    aria-label="月"
+                    {...form.getInputProps("birthMonth")}
+                    error={!!form.errors.birthMonth}
+                  />
+                  <Text c="dimmed" size="sm">
+                    /
+                  </Text>
+                  <NumberInput
+                    placeholder="DD"
+                    hideControls
+                    min={1}
+                    max={31}
+                    style={{ width: 54 }}
+                    styles={{ input: { textAlign: "center" } }}
+                    aria-label="日"
+                    {...form.getInputProps("birthDay")}
+                    error={!!form.errors.birthDay}
+                  />
+                </Group>
+              </Input.Wrapper>
+            </Group>
 
-            <NumberInput
-              label="年齢"
-              suffix=" 歳"
-              min={10}
-              max={120}
-              {...form.getInputProps("age")}
-            />
+            {/* 身長・体重 横並び（体重は最新値・変更不可） */}
+            <SimpleGrid cols={2} spacing="md">
+              <NumberInput
+                label="身長"
+                suffix=" cm"
+                min={100}
+                max={250}
+                decimalScale={1}
+                step={0.1}
+                styles={{ input: { textAlign: "center" } }}
+                {...form.getInputProps("heightCm")}
+              />
+              <NumberInput
+                label="体重（最新）"
+                suffix=" kg"
+                decimalScale={1}
+                value={latestWeight ?? ""}
+                styles={{ input: { textAlign: "center" } }}
+                disabled
+              />
+            </SimpleGrid>
 
-            <NumberInput
-              label="身長"
-              suffix=" cm"
-              min={100}
-              max={250}
-              decimalScale={1}
-              step={0.1}
-              {...form.getInputProps("heightCm")}
-            />
-
-            <NumberInput
-              label="体重（基準値）"
-              suffix=" kg"
-              min={30}
-              max={300}
-              decimalScale={1}
-              step={0.1}
-              {...form.getInputProps("weightKg")}
+            <Select
+              label="活動レベル"
+              data={ACTIVITY_LEVELS.map((l) => ({
+                value: l.value,
+                label: l.label,
+              }))}
+              {...form.getInputProps("activityLevel")}
             />
 
             <Divider />
 
-            <Stack gap={4}>
-              <Text size="sm" c="dimmed">
-                基礎代謝（ハリス-ベネディクト式）
-              </Text>
-              {previewBmr !== null ? (
-                <Text fw={700} size="xl">
-                  {previewBmr.toLocaleString()} kcal/日
+            {/* 代謝量 */}
+            <Stack gap="xs">
+              <Group justify="space-between" align="center">
+                <Text size="sm" fw={500}>
+                  代謝量
                 </Text>
-              ) : bmr !== null ? (
-                <Text fw={700} size="xl">
-                  {bmr.toLocaleString()} kcal/日
-                </Text>
-              ) : (
-                <Text c="dimmed" size="sm">
-                  上記を入力すると自動計算されます
-                </Text>
-              )}
+                <Button
+                  variant="light"
+                  size="xs"
+                  leftSection={<IconCalculator size={14} />}
+                  onClick={handleCalculate}
+                  disabled={
+                    !latestWeight || form.values.heightCm === "" || !birthDate
+                  }
+                >
+                  代謝量計算
+                </Button>
+              </Group>
+
+              <SimpleGrid cols={2} spacing="md">
+                <NumberInput
+                  label="基礎代謝量（BMR）"
+                  suffix=" kcal/日"
+                  min={500}
+                  max={5000}
+                  styles={{ input: { textAlign: "center" } }}
+                  {...form.getInputProps("bmr")}
+                />
+                <NumberInput
+                  label="活動代謝量（TDEE）"
+                  suffix=" kcal/日"
+                  min={500}
+                  max={10000}
+                  styles={{ input: { textAlign: "center" } }}
+                  {...form.getInputProps("tdee")}
+                />
+              </SimpleGrid>
             </Stack>
 
             <Group justify="flex-end">
