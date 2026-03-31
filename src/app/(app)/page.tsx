@@ -1,7 +1,7 @@
 "use client";
 
 import { useDisclosure } from "@mantine/hooks";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { ChatHistory } from "@/components/chat/ChatHistory";
 import { ChatInput } from "@/components/chat/ChatInput";
 import { BmrSetupModal } from "@/components/home/BmrSetupModal";
@@ -36,6 +36,7 @@ export default function HomePage() {
   const [sending, setSending] = useState(false);
   const [opened, { open, close }] = useDisclosure(false);
   const bottomRef = useRef<HTMLDivElement>(null);
+  const didInitialScrollRef = useRef(false);
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: 初回のみ取得（cachedItemsでガード）
   useEffect(() => {
@@ -113,8 +114,15 @@ export default function HomePage() {
       });
   }, []);
 
-  // biome-ignore lint/correctness/useExhaustiveDependencies: items 追加時に最下部へスクロールするため意図的な依存
-  useEffect(() => {
+  useLayoutEffect(() => {
+    if (items.length === 0) return;
+
+    if (!didInitialScrollRef.current) {
+      bottomRef.current?.scrollIntoView();
+      didInitialScrollRef.current = true;
+      return;
+    }
+
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [items]);
 
