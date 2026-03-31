@@ -25,6 +25,7 @@ model User {
   bmr           Float?    // 計算済み基礎代謝 (kcal)
   tdee          Float?    // 計算済み活動代謝量 (kcal)
   activityLevel String?   // "sedentary" | "light" | "moderate" | "active" | "very_active"
+  calTarget     String?   // カロリーインジケータの基準: "bmr" | "tdee"
 
   mealRecords     MealRecord[]
   weightRecords   WeightRecord[]

@@ -108,6 +108,8 @@ export type ActivityLevel =
   | "active"
   | "very_active";
 
+export type CalTarget = "bmr" | "tdee";
+
 export interface UserProfile {
   heightCm: number;
   weightKg: number;
@@ -117,4 +119,5 @@ export interface UserProfile {
   bmr: number;
   tdee?: number;
   activityLevel?: ActivityLevel;
+  calTarget?: CalTarget;
 }

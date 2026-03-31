@@ -6,26 +6,27 @@ import type { BotChatItem, ChatItem, UserProfile } from "@/types";
 
 interface BmrBarProps {
   consumed: number;
-  bmr: number;
+  target: number;
+  targetLabel: string;
 }
 
-function BmrBar({ consumed, bmr }: BmrBarProps) {
-  // バー全体を bmr*1.5 の範囲とし、bmr位置にマーカーを置く
-  const MAX = bmr * 1.5;
-  const normalPct = Math.min((consumed / MAX) * 100, (bmr / MAX) * 100);
+function BmrBar({ consumed, target, targetLabel }: BmrBarProps) {
+  // バー全体を target*1.5 の範囲とし、target位置にマーカーを置く
+  const MAX = target * 1.5;
+  const normalPct = Math.min((consumed / MAX) * 100, (target / MAX) * 100);
   const overPct =
-    consumed > bmr
-      ? Math.min(((consumed - bmr) / MAX) * 100, 100 - (bmr / MAX) * 100)
+    consumed > target
+      ? Math.min(((consumed - target) / MAX) * 100, 100 - (target / MAX) * 100)
       : 0;
-  const markerPct = (bmr / MAX) * 100;
-  const diff = Math.round(consumed - bmr);
+  const markerPct = (target / MAX) * 100;
+  const diff = Math.round(consumed - target);
   const over = diff > 0;
 
   return (
     <Box style={{ width: "100%" }}>
       <Group justify="space-between" mb={2}>
         <Text size="xs" c="dimmed">
-          BMR {bmr.toLocaleString()} kcal
+          {targetLabel} {target.toLocaleString()} kcal
         </Text>
         <Text size="xs" fw={600} c={over ? "orange.7" : "blue.6"}>
           {over ? "+" : ""}
@@ -33,7 +34,7 @@ function BmrBar({ consumed, bmr }: BmrBarProps) {
         </Text>
       </Group>
       <Tooltip
-        label={`${consumed.toLocaleString()} / ${bmr.toLocaleString()} kcal`}
+        label={`${consumed.toLocaleString()} / ${target.toLocaleString()} kcal`}
         position="bottom"
       >
         <Box
@@ -144,9 +145,14 @@ export function DailySummary({
     0,
   );
 
+  const calTarget = profile?.calTarget ?? "bmr";
+  const targetValue =
+    calTarget === "tdee" && profile?.tdee != null ? profile.tdee : profile?.bmr;
+  const targetLabel = calTarget === "tdee" ? "TDEE" : "BMR";
+
   const bmrDiff =
-    profile && profile.bmr != null
-      ? Math.round(totalCalories - totalBurned - profile.bmr)
+    targetValue != null
+      ? Math.round(totalCalories - totalBurned - targetValue)
       : null;
 
   return (
@@ -179,8 +185,12 @@ export function DailySummary({
             </Group>
           )}
 
-          {profile !== null && profile.bmr != null && bmrDiff !== null && (
-            <BmrBar consumed={totalCalories - totalBurned} bmr={profile.bmr} />
+          {profile !== null && targetValue != null && bmrDiff !== null && (
+            <BmrBar
+              consumed={totalCalories - totalBurned}
+              target={targetValue}
+              targetLabel={targetLabel}
+            />
           )}
 
           {profile === null && (

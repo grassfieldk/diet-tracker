@@ -32,7 +32,12 @@ import {
   calculateBmr,
   calculateTdee,
 } from "@/lib/bmr";
-import type { ActivityLevel, Sex, UserProfile } from "@/types";
+import {
+  getCachedProfile,
+  isCachedProfileFetched,
+  setCachedProfile,
+} from "@/lib/profile-cache";
+import type { ActivityLevel, CalTarget, Sex, UserProfile } from "@/types";
 
 interface FormValues {
   heightCm: number | string;
@@ -43,6 +48,7 @@ interface FormValues {
   activityLevel: ActivityLevel;
   bmr: number | string;
   tdee: number | string;
+  calTarget: CalTarget;
 }
 
 function toBirthDate(
@@ -65,11 +71,11 @@ function toBirthDate(
 }
 
 // タブ切り替え時の再フェッチを防ぐモジュールレベルキャッシュ
-let cachedProfile: UserProfile | null | undefined;
 let cachedLatestWeight: number | null | undefined;
 
 export default function ProfilePage() {
   const [saving, setSaving] = useState(false);
+  const [mounted, setMounted] = useState(false);
   const [latestWeight, setLatestWeight] = useState<number | null>(
     cachedLatestWeight ?? null,
   );
@@ -86,6 +92,7 @@ export default function ProfilePage() {
       activityLevel: "sedentary",
       bmr: "",
       tdee: "",
+      calTarget: "bmr",
     },
     validate: {
       heightCm: (v) =>
@@ -118,10 +125,14 @@ export default function ProfilePage() {
     },
   });
 
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
   // biome-ignore lint/correctness/useExhaustiveDependencies: 初回のみ取得
   useEffect(() => {
-    if (cachedProfile !== undefined) {
-      const data = cachedProfile;
+    if (isCachedProfileFetched()) {
+      const data = getCachedProfile();
       if (data) {
         const bd = data.birthDate ? new Date(data.birthDate) : null;
         form.setValues({
@@ -133,13 +144,14 @@ export default function ProfilePage() {
           activityLevel: (data.activityLevel as ActivityLevel) ?? "sedentary",
           bmr: data.bmr ?? "",
           tdee: data.tdee ?? "",
+          calTarget: (data.calTarget as CalTarget) ?? "bmr",
         });
       }
     } else {
       fetch("/api/user/profile")
         .then((r) => r.json())
         .then((data: UserProfile | null) => {
-          cachedProfile = data;
+          setCachedProfile(data);
           if (!data) return;
           const bd = data.birthDate ? new Date(data.birthDate) : null;
           form.setValues({
@@ -151,6 +163,7 @@ export default function ProfilePage() {
             activityLevel: (data.activityLevel as ActivityLevel) ?? "sedentary",
             bmr: data.bmr ?? "",
             tdee: data.tdee ?? "",
+            calTarget: (data.calTarget as CalTarget) ?? "bmr",
           });
         })
         .catch(() => {});
@@ -201,10 +214,11 @@ export default function ProfilePage() {
           activityLevel: values.activityLevel,
           bmr: values.bmr !== "" ? Number(values.bmr) : null,
           tdee: values.tdee !== "" ? Number(values.tdee) : null,
+          calTarget: values.calTarget,
         }),
       });
       // キャッシュを更新
-      cachedProfile = {
+      setCachedProfile({
         heightCm: values.heightCm !== "" ? Number(values.heightCm) : 0,
         weightKg: latestWeight ?? 0,
         age: 0,
@@ -213,7 +227,8 @@ export default function ProfilePage() {
         activityLevel: values.activityLevel,
         bmr: values.bmr !== "" ? Number(values.bmr) : 0,
         tdee: values.tdee !== "" ? Number(values.tdee) : undefined,
-      };
+        calTarget: values.calTarget,
+      });
       notifications.show({
         message: "プロフィールを保存しました",
         color: "green",
@@ -229,17 +244,19 @@ export default function ProfilePage() {
     <Stack gap="md">
       <Box hiddenFrom="sm">
         <Group justify="flex-end" align="center">
-          <Switch
-            checked={colorScheme === "dark"}
-            onChange={() =>
-              setColorScheme(colorScheme === "light" ? "dark" : "light")
-            }
-            size="md"
-            color={colorScheme === "dark" ? "gray.6" : "yellow"}
-            onLabel={<IconSun size={14} />}
-            offLabel={<IconMoon size={14} />}
-            aria-label="カラースキーム切替"
-          />
+          {mounted && (
+            <Switch
+              checked={colorScheme === "dark"}
+              onChange={() =>
+                setColorScheme(colorScheme === "light" ? "dark" : "light")
+              }
+              size="md"
+              color={colorScheme === "dark" ? "gray.6" : "yellow"}
+              onLabel={<IconSun size={14} />}
+              offLabel={<IconMoon size={14} />}
+              aria-label="カラースキーム切替"
+            />
+          )}
         </Group>
       </Box>
 
@@ -394,6 +411,21 @@ export default function ProfilePage() {
                   {...form.getInputProps("tdee")}
                 />
               </SimpleGrid>
+
+              <Input.Wrapper label="カロリー目標の基準">
+                <SegmentedControl
+                  mt={4}
+                  fullWidth
+                  data={[
+                    { label: "基礎代謝（BMR）", value: "bmr" },
+                    { label: "活動代謝（TDEE）", value: "tdee" },
+                  ]}
+                  value={form.values.calTarget}
+                  onChange={(v) =>
+                    form.setFieldValue("calTarget", v as CalTarget)
+                  }
+                />
+              </Input.Wrapper>
             </Stack>
 
             <Group justify="flex-end">

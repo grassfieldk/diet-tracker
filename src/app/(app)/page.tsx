@@ -7,6 +7,7 @@ import { ChatInput } from "@/components/chat/ChatInput";
 import { BmrSetupModal } from "@/components/home/BmrSetupModal";
 import { DailySummary } from "@/components/home/DailySummary";
 import { PageLayout } from "@/components/layout/PageLayout";
+import { getCachedProfile, setCachedProfile } from "@/lib/profile-cache";
 import type {
   BotChatItem,
   ChatItem,
@@ -22,7 +23,6 @@ const INITIAL_LOAD_LIMIT = 20;
 
 // モジュールレベルキャッシュ（タブ切り替えで破棄されない）
 let cachedItems: ChatItem[] | null = null;
-let cachedProfile: UserProfile | null = null;
 
 function todayString(): string {
   const d = new Date();
@@ -31,7 +31,9 @@ function todayString(): string {
 
 export default function HomePage() {
   const [items, setItems] = useState<ChatItem[]>(cachedItems ?? []);
-  const [profile, setProfile] = useState<UserProfile | null>(cachedProfile);
+  const [profile, setProfile] = useState<UserProfile | null>(
+    getCachedProfile(),
+  );
   const [loading, setLoading] = useState(cachedItems === null);
   const [sending, setSending] = useState(false);
   const [opened, { open, close }] = useDisclosure(false);
@@ -44,7 +46,7 @@ export default function HomePage() {
       .then((r) => r.json())
       .then((data: UserProfile | null) => {
         if (data) {
-          cachedProfile = data;
+          setCachedProfile(data);
           setProfile(data);
         }
       })
@@ -246,7 +248,7 @@ export default function HomePage() {
   };
 
   const handleProfileSave = async (p: UserProfile) => {
-    cachedProfile = p;
+    setCachedProfile(p);
     setProfile(p);
     try {
       await fetch("/api/user/profile", {

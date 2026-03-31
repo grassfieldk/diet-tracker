@@ -23,6 +23,7 @@ export async function GET() {
     bmr: user.bmr,
     tdee: user.tdee,
     activityLevel: user.activityLevel,
+    calTarget: user.calTarget,
   });
 }
 
@@ -34,8 +35,17 @@ export async function PUT(request: Request) {
   const userId = session.user.sub;
 
   const body = await request.json();
-  const { heightCm, weightKg, age, birthDate, sex, bmr, tdee, activityLevel } =
-    body;
+  const {
+    heightCm,
+    weightKg,
+    age,
+    birthDate,
+    sex,
+    bmr,
+    tdee,
+    activityLevel,
+    calTarget,
+  } = body;
 
   const user = await prisma.user.upsert({
     where: { id: userId },
@@ -49,6 +59,7 @@ export async function PUT(request: Request) {
       bmr: bmr ?? null,
       tdee: tdee ?? null,
       activityLevel: activityLevel ?? null,
+      calTarget: calTarget ?? null,
     },
     update: {
       height: heightCm ?? null,
@@ -59,6 +70,7 @@ export async function PUT(request: Request) {
       bmr: bmr ?? null,
       tdee: tdee ?? null,
       activityLevel: activityLevel ?? null,
+      calTarget: calTarget ?? null,
     },
   });
 
@@ -71,5 +83,6 @@ export async function PUT(request: Request) {
     bmr: user.bmr,
     tdee: user.tdee,
     activityLevel: user.activityLevel,
+    calTarget: user.calTarget,
   });
 }
