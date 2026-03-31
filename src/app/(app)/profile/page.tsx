@@ -229,9 +229,14 @@ export default function ProfilePage() {
       notifications.show({
         message: "プロフィールを保存しました",
         color: "green",
+        position: "top-center",
       });
     } catch {
-      notifications.show({ message: "保存に失敗しました", color: "red" });
+      notifications.show({
+        message: "保存に失敗しました",
+        color: "red",
+        position: "top-center",
+      });
     } finally {
       setSaving(false);
     }
