@@ -7,7 +7,7 @@ import { ChatInput } from "@/components/chat/ChatInput";
 import { BmrSetupModal } from "@/components/home/BmrSetupModal";
 import { DailySummary } from "@/components/home/DailySummary";
 import { PageLayout } from "@/components/layout/PageLayout";
-import { getCachedProfile, setCachedProfile } from "@/lib/profile-cache";
+import { useProfile } from "@/contexts/ProfileContext";
 import type {
   BotChatItem,
   ChatItem,
@@ -30,27 +30,25 @@ function todayString(): string {
 }
 
 export default function HomePage() {
+  const { profile, profileFetched, setProfile } = useProfile();
   const [items, setItems] = useState<ChatItem[]>(cachedItems ?? []);
-  const [profile, setProfile] = useState<UserProfile | null>(
-    getCachedProfile(),
-  );
   const [loading, setLoading] = useState(cachedItems === null);
   const [sending, setSending] = useState(false);
   const [opened, { open, close }] = useDisclosure(false);
   const bottomRef = useRef<HTMLDivElement>(null);
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: 初回のみ取得（cachedItemsでガード）
   useEffect(() => {
     if (cachedItems !== null) return;
 
-    fetch("/api/user/profile")
-      .then((r) => r.json())
-      .then((data: UserProfile | null) => {
-        if (data) {
-          setCachedProfile(data);
-          setProfile(data);
-        }
-      })
-      .catch(() => {});
+    if (!profileFetched) {
+      fetch("/api/user/profile")
+        .then((r) => r.json())
+        .then((data: UserProfile | null) => {
+          if (data) setProfile(data);
+        })
+        .catch(() => {});
+    }
 
     Promise.all([
       fetch(`/api/meals?limit=${INITIAL_LOAD_LIMIT}`).then((r) => r.json()),
@@ -248,7 +246,6 @@ export default function HomePage() {
   };
 
   const handleProfileSave = async (p: UserProfile) => {
-    setCachedProfile(p);
     setProfile(p);
     try {
       await fetch("/api/user/profile", {

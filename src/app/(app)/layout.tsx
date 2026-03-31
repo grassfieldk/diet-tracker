@@ -29,6 +29,7 @@ import {
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
+import { ProfileProvider } from "@/contexts/ProfileContext";
 
 const NAV_ITEMS = [
   { href: "/", label: "ホーム", icon: IconHome },
@@ -57,7 +58,7 @@ function ColorSchemeToggle() {
   );
 }
 
-export default function AppLayout({ children }: { children: React.ReactNode }) {
+function AppLayoutInner({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const isMobile = useMediaQuery("(max-width: 47.9375em)");
   const [, { close }] = useDisclosure();
@@ -222,5 +223,13 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       </AppShell>
       {LogoutModal}
     </>
+  );
+}
+
+export default function AppLayout({ children }: { children: React.ReactNode }) {
+  return (
+    <ProfileProvider>
+      <AppLayoutInner>{children}</AppLayoutInner>
+    </ProfileProvider>
   );
 }

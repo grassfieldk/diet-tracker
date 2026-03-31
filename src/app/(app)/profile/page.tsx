@@ -26,17 +26,13 @@ import {
   IconSun,
 } from "@tabler/icons-react";
 import { useEffect, useState } from "react";
+import { useProfile } from "@/contexts/ProfileContext";
 import {
   ACTIVITY_LEVELS,
   ageFromBirthDate,
   calculateBmr,
   calculateTdee,
 } from "@/lib/bmr";
-import {
-  getCachedProfile,
-  isCachedProfileFetched,
-  setCachedProfile,
-} from "@/lib/profile-cache";
 import type { ActivityLevel, CalTarget, Sex, UserProfile } from "@/types";
 
 interface FormValues {
@@ -74,6 +70,7 @@ function toBirthDate(
 let cachedLatestWeight: number | null | undefined;
 
 export default function ProfilePage() {
+  const { profile: contextProfile, profileFetched, setProfile } = useProfile();
   const [saving, setSaving] = useState(false);
   const [mounted, setMounted] = useState(false);
   const [latestWeight, setLatestWeight] = useState<number | null>(
@@ -131,8 +128,8 @@ export default function ProfilePage() {
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: 初回のみ取得
   useEffect(() => {
-    if (isCachedProfileFetched()) {
-      const data = getCachedProfile();
+    if (profileFetched) {
+      const data = contextProfile;
       if (data) {
         const bd = data.birthDate ? new Date(data.birthDate) : null;
         form.setValues({
@@ -151,7 +148,7 @@ export default function ProfilePage() {
       fetch("/api/user/profile")
         .then((r) => r.json())
         .then((data: UserProfile | null) => {
-          setCachedProfile(data);
+          setProfile(data);
           if (!data) return;
           const bd = data.birthDate ? new Date(data.birthDate) : null;
           form.setValues({
@@ -217,8 +214,8 @@ export default function ProfilePage() {
           calTarget: values.calTarget,
         }),
       });
-      // キャッシュを更新
-      setCachedProfile({
+      // Contextを更新（ホーム画面に即時反映）
+      setProfile({
         heightCm: values.heightCm !== "" ? Number(values.heightCm) : 0,
         weightKg: latestWeight ?? 0,
         age: 0,
