@@ -1,4 +1,5 @@
-import { auth0 } from "@/lib/auth0";
+import { parseJsonBody, requireUserId } from "@/lib/api/request";
+import { toWeightResponse } from "@/lib/api/serializers";
 import { prisma } from "@/lib/prisma";
 
 interface RouteParams {
@@ -6,20 +7,18 @@ interface RouteParams {
 }
 
 export async function PUT(request: Request, { params }: RouteParams) {
-  const session = await auth0.getSession();
-  if (!session) {
-    return Response.json({ error: "Unauthorized" }, { status: 401 });
+  const auth = await requireUserId();
+  if ("response" in auth) {
+    return auth.response;
   }
-  const userId = session.user.sub;
+  const { userId } = auth;
   const { id } = await params;
 
-  let body: unknown;
-  try {
-    body = await request.json();
-  } catch {
-    return Response.json({ error: "Invalid JSON body" }, { status: 400 });
+  const parsedBody = await parseJsonBody<{ weight?: unknown }>(request);
+  if ("response" in parsedBody) {
+    return parsedBody.response;
   }
-  const { weight } = body as { weight?: unknown };
+  const { weight } = parsedBody.data;
 
   if (
     weight == null ||
@@ -36,22 +35,18 @@ export async function PUT(request: Request, { params }: RouteParams) {
       where: { id, userId },
       data: { weight },
     });
-    return Response.json({
-      id: record.id,
-      weight: record.weight,
-      recordedAt: record.recordedAt,
-    });
+    return Response.json(toWeightResponse(record));
   } catch {
     return Response.json({ error: "Not found" }, { status: 404 });
   }
 }
 
 export async function DELETE(_request: Request, { params }: RouteParams) {
-  const session = await auth0.getSession();
-  if (!session) {
-    return Response.json({ error: "Unauthorized" }, { status: 401 });
+  const auth = await requireUserId();
+  if ("response" in auth) {
+    return auth.response;
   }
-  const userId = session.user.sub;
+  const { userId } = auth;
   const { id } = await params;
 
   try {

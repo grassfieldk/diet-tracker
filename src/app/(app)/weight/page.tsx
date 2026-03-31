@@ -8,6 +8,12 @@ import { useEffect, useState } from "react";
 import { PageLayout } from "@/components/layout/PageLayout";
 import { WeightEditModal } from "@/components/weight/WeightEditModal";
 import { WeightList } from "@/components/weight/WeightList";
+import {
+  clearKeyedCache,
+  getKeyedCacheValue,
+  setKeyedCacheValue,
+} from "@/lib/client/cache";
+import { type ApiWeightRecord, toWeightRecord } from "@/lib/client/mappers";
 import type { WeightRecord } from "@/types";
 
 const GRAPH_FRAME_HEIGHT = 286;
@@ -29,24 +35,17 @@ const AsyncWeightGraph = dynamic(
   },
 );
 
-interface ApiWeightRecord {
-  id: string;
-  weight: number;
-  recordedAt: string;
-}
-
-function toWeightRecord(r: ApiWeightRecord): WeightRecord {
-  return { id: r.id, weight: r.weight, recordedAt: new Date(r.recordedAt) };
-}
-
-// モジュールレベルキャッシュ（days 別）
-const recordsCache = new Map<number, WeightRecord[]>();
+const WEIGHT_RECORDS_CACHE_KEY = "weight:records";
 
 export default function WeightPage() {
-  const [records, setRecords] = useState<WeightRecord[]>(
-    recordsCache.get(30) ?? [],
+  const initialCachedRecords = getKeyedCacheValue<WeightRecord[]>(
+    WEIGHT_RECORDS_CACHE_KEY,
+    30,
   );
-  const [loading, setLoading] = useState(!recordsCache.has(30));
+  const [records, setRecords] = useState<WeightRecord[]>(
+    initialCachedRecords ?? [],
+  );
+  const [loading, setLoading] = useState(initialCachedRecords === undefined);
   const [editing, setEditing] = useState<WeightRecord | null>(null);
   const [days, setDays] = useState(30);
   const [saving, setSaving] = useState(false);
@@ -66,8 +65,11 @@ export default function WeightPage() {
   });
 
   const loadRecords = (d: number) => {
-    if (recordsCache.has(d)) {
-      const cached = recordsCache.get(d) ?? [];
+    const cached = getKeyedCacheValue<WeightRecord[]>(
+      WEIGHT_RECORDS_CACHE_KEY,
+      d,
+    );
+    if (cached !== undefined) {
       setRecords(cached);
       setLoading(false);
       if (cached.length > 0) {
@@ -80,7 +82,7 @@ export default function WeightPage() {
       .then((r) => r.json())
       .then((data: ApiWeightRecord[]) => {
         const converted = data.map(toWeightRecord);
-        recordsCache.set(d, converted);
+        setKeyedCacheValue(WEIGHT_RECORDS_CACHE_KEY, d, converted);
         setRecords(converted);
         setLoading(false);
         // 最新レコードの体重をデフォルト値として設定（初回ロード時のみ）
@@ -128,8 +130,8 @@ export default function WeightPage() {
           );
         })();
         // 全 days キャッシュを無効化（新しいレコードが含まれるため）
-        recordsCache.clear();
-        recordsCache.set(days, next);
+        clearKeyedCache(WEIGHT_RECORDS_CACHE_KEY);
+        setKeyedCacheValue(WEIGHT_RECORDS_CACHE_KEY, days, next);
         return next;
       });
       form.setFieldValue("date", new Date());
@@ -145,7 +147,7 @@ export default function WeightPage() {
       await fetch(`/api/weights/${id}`, { method: "DELETE" });
       setRecords((prev) => {
         const next = prev.filter((r) => r.id !== id);
-        recordsCache.set(days, next);
+        setKeyedCacheValue(WEIGHT_RECORDS_CACHE_KEY, days, next);
         return next;
       });
     } catch {
@@ -165,7 +167,7 @@ export default function WeightPage() {
         const next = prev.map((r) =>
           r.id === id ? toWeightRecord(updated) : r,
         );
-        recordsCache.set(days, next);
+        setKeyedCacheValue(WEIGHT_RECORDS_CACHE_KEY, days, next);
         return next;
       });
     } catch {

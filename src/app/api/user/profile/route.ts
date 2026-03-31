@@ -1,15 +1,15 @@
-import { auth0 } from "@/lib/auth0";
+import { parseJsonBody, requireUserId } from "@/lib/api/request";
 import { prisma } from "@/lib/prisma";
 
 const isFiniteNumber = (value: unknown): value is number =>
   typeof value === "number" && Number.isFinite(value);
 
 export async function GET() {
-  const session = await auth0.getSession();
-  if (!session) {
-    return Response.json({ error: "Unauthorized" }, { status: 401 });
+  const auth = await requireUserId();
+  if ("response" in auth) {
+    return auth.response;
   }
-  const userId = session.user.sub;
+  const { userId } = auth;
 
   const user = await prisma.user.findUnique({ where: { id: userId } });
 
@@ -31,17 +31,25 @@ export async function GET() {
 }
 
 export async function PUT(request: Request) {
-  const session = await auth0.getSession();
-  if (!session) {
-    return Response.json({ error: "Unauthorized" }, { status: 401 });
+  const auth = await requireUserId();
+  if ("response" in auth) {
+    return auth.response;
   }
-  const userId = session.user.sub;
+  const { userId } = auth;
 
-  let body: unknown;
-  try {
-    body = await request.json();
-  } catch {
-    return Response.json({ error: "Invalid JSON body" }, { status: 400 });
+  const parsedBody = await parseJsonBody<{
+    heightCm?: unknown;
+    weightKg?: unknown;
+    age?: unknown;
+    birthDate?: unknown;
+    sex?: unknown;
+    bmr?: unknown;
+    tdee?: unknown;
+    activityLevel?: unknown;
+    calTarget?: unknown;
+  }>(request);
+  if ("response" in parsedBody) {
+    return parsedBody.response;
   }
 
   const {
@@ -54,17 +62,7 @@ export async function PUT(request: Request) {
     tdee,
     activityLevel,
     calTarget,
-  } = body as {
-    heightCm?: unknown;
-    weightKg?: unknown;
-    age?: unknown;
-    birthDate?: unknown;
-    sex?: unknown;
-    bmr?: unknown;
-    tdee?: unknown;
-    activityLevel?: unknown;
-    calTarget?: unknown;
-  };
+  } = parsedBody.data;
 
   const parsedBirthDate =
     birthDate == null ? null : new Date(String(birthDate));

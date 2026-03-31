@@ -1,26 +1,21 @@
-import { auth0 } from "@/lib/auth0";
+import { parsePositiveIntParam } from "@/lib/api/query";
+import { parseJsonBody, requireUserId } from "@/lib/api/request";
+import { toWeightResponse } from "@/lib/api/serializers";
 import { prisma } from "@/lib/prisma";
 
 export async function GET(request: Request) {
-  const session = await auth0.getSession();
-  if (!session) {
-    return Response.json({ error: "Unauthorized" }, { status: 401 });
+  const auth = await requireUserId();
+  if ("response" in auth) {
+    return auth.response;
   }
-  const userId = session.user.sub;
+  const { userId } = auth;
 
   const { searchParams } = new URL(request.url);
-  const latestParam = searchParams.get("latest");
-
-  const parsedLatest = latestParam ? Number.parseInt(latestParam, 10) : null;
-  if (
-    latestParam &&
-    (!Number.isInteger(parsedLatest) || parsedLatest <= 0 || parsedLatest > 50)
-  ) {
-    return Response.json(
-      { error: "latest must be a positive integer up to 50" },
-      { status: 400 },
-    );
+  const latestParsed = parsePositiveIntParam(searchParams, "latest", 50);
+  if ("response" in latestParsed) {
+    return latestParsed.response;
   }
+  const parsedLatest = latestParsed.value;
 
   if (parsedLatest) {
     const latestRecords = await prisma.weightRecord.findMany({
@@ -29,23 +24,14 @@ export async function GET(request: Request) {
       take: parsedLatest,
     });
 
-    return Response.json(
-      latestRecords.map((r) => ({
-        id: r.id,
-        weight: r.weight,
-        recordedAt: r.recordedAt,
-      })),
-    );
+    return Response.json(latestRecords.map(toWeightResponse));
   }
 
-  const daysParam = searchParams.get("days") ?? "30";
-  const days = Number.parseInt(daysParam, 10);
-  if (!Number.isInteger(days) || days <= 0 || days > 365) {
-    return Response.json(
-      { error: "days must be a positive integer up to 365" },
-      { status: 400 },
-    );
+  const daysParsed = parsePositiveIntParam(searchParams, "days", 365);
+  if ("response" in daysParsed) {
+    return daysParsed.response;
   }
+  const days = daysParsed.value ?? 30;
 
   const since = new Date();
   since.setDate(since.getDate() - days);
@@ -58,31 +44,24 @@ export async function GET(request: Request) {
     orderBy: { recordedAt: "asc" },
   });
 
-  return Response.json(
-    records.map((r) => ({
-      id: r.id,
-      weight: r.weight,
-      recordedAt: r.recordedAt,
-    })),
-  );
+  return Response.json(records.map(toWeightResponse));
 }
 
 export async function POST(request: Request) {
-  const session = await auth0.getSession();
-  if (!session) {
-    return Response.json({ error: "Unauthorized" }, { status: 401 });
+  const auth = await requireUserId();
+  if ("response" in auth) {
+    return auth.response;
   }
-  const userId = session.user.sub;
+  const { userId } = auth;
 
-  let body: unknown;
-  try {
-    body = await request.json();
-  } catch {
-    return Response.json({ error: "Invalid JSON body" }, { status: 400 });
+  const parsedBody = await parseJsonBody<{
+    weight?: unknown;
+    recordedAt?: unknown;
+  }>(request);
+  if ("response" in parsedBody) {
+    return parsedBody.response;
   }
-
-  const payload = body as { weight?: unknown; recordedAt?: unknown };
-  const { weight, recordedAt } = payload;
+  const { weight, recordedAt } = parsedBody.data;
 
   if (
     weight == null ||
@@ -132,8 +111,5 @@ export async function POST(request: Request) {
         },
       });
 
-  return Response.json(
-    { id: record.id, weight: record.weight, recordedAt: record.recordedAt },
-    { status: 201 },
-  );
+  return Response.json(toWeightResponse(record), { status: 201 });
 }

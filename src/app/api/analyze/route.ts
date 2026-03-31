@@ -1,23 +1,23 @@
 import { getAIAdapter } from "@/lib/ai";
-import { auth0 } from "@/lib/auth0";
+import { parseJsonBody, requireUserId } from "@/lib/api/request";
 import { detectCategory } from "@/lib/mock-ai";
 import type { InputMode } from "@/types";
 
 const WEIGHT_REGEX = /(\d+(?:\.\d+)?)\s*k?g?/i;
 
 export async function POST(request: Request) {
-  const session = await auth0.getSession();
-  if (!session) {
-    return Response.json({ error: "Unauthorized" }, { status: 401 });
+  const auth = await requireUserId();
+  if ("response" in auth) {
+    return auth.response;
   }
 
-  let body: unknown;
-  try {
-    body = await request.json();
-  } catch {
-    return Response.json({ error: "Invalid JSON body" }, { status: 400 });
+  const parsedBody = await parseJsonBody<{ text: string; mode: InputMode }>(
+    request,
+  );
+  if ("response" in parsedBody) {
+    return parsedBody.response;
   }
-  const { text, mode } = body as { text: string; mode: InputMode };
+  const { text, mode } = parsedBody.data;
 
   if (!text || typeof text !== "string") {
     return Response.json({ error: "text is required" }, { status: 400 });

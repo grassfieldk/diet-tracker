@@ -8,6 +8,7 @@ import { BmrSetupModal } from "@/components/home/BmrSetupModal";
 import { DailySummary } from "@/components/home/DailySummary";
 import { PageLayout } from "@/components/layout/PageLayout";
 import { useProfile } from "@/contexts/ProfileContext";
+import { getCacheValue, setCacheValue } from "@/lib/client/cache";
 import type {
   BotChatItem,
   ChatItem,
@@ -20,9 +21,7 @@ import type {
 } from "@/types";
 
 const INITIAL_LOAD_DAYS = 3;
-
-// モジュールレベルキャッシュ（タブ切り替えで破棄されない）
-let cachedItems: ChatItem[] | null = null;
+const HOME_ITEMS_CACHE_KEY = "home:chat-items";
 
 function todayString(): string {
   const d = new Date();
@@ -31,8 +30,9 @@ function todayString(): string {
 
 export default function HomePage() {
   const { profile, profileFetched, setProfile } = useProfile();
+  const cachedItems = getCacheValue<ChatItem[]>(HOME_ITEMS_CACHE_KEY);
   const [items, setItems] = useState<ChatItem[]>(cachedItems ?? []);
-  const [loading, setLoading] = useState(cachedItems === null);
+  const [loading, setLoading] = useState(cachedItems === undefined);
   const [sending, setSending] = useState(false);
   const [opened, { open, close }] = useDisclosure(false);
   const bottomRef = useRef<HTMLDivElement>(null);
@@ -40,7 +40,8 @@ export default function HomePage() {
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: 初回のみ取得（cachedItemsでガード）
   useEffect(() => {
-    if (cachedItems !== null) return;
+    const existing = getCacheValue<ChatItem[]>(HOME_ITEMS_CACHE_KEY);
+    if (existing !== undefined) return;
 
     if (!profileFetched) {
       fetch("/api/user/profile")
@@ -104,7 +105,7 @@ export default function HomePage() {
             });
           }
           loaded.sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
-          cachedItems = loaded;
+          setCacheValue(HOME_ITEMS_CACHE_KEY, loaded);
           setItems(loaded);
           setLoading(false);
         },
@@ -141,7 +142,7 @@ export default function HomePage() {
 
     setItems((prev) => {
       const next = [...prev, userItem, pendingItem];
-      cachedItems = next;
+      setCacheValue(HOME_ITEMS_CACHE_KEY, next);
       return next;
     });
     setSending(true);
@@ -183,7 +184,7 @@ export default function HomePage() {
         };
         setItems((prev) => {
           const next = prev.map((item) => (item.id === bid ? botItem : item));
-          cachedItems = next;
+          setCacheValue(HOME_ITEMS_CACHE_KEY, next);
           return next;
         });
       } else if (analyzed.type === "exercise" && analyzed.analysis) {
@@ -208,7 +209,7 @@ export default function HomePage() {
         };
         setItems((prev) => {
           const next = prev.map((item) => (item.id === bid ? botItem : item));
-          cachedItems = next;
+          setCacheValue(HOME_ITEMS_CACHE_KEY, next);
           return next;
         });
       } else if (analyzed.type === "weight" && analyzed.weightKg != null) {
@@ -227,7 +228,7 @@ export default function HomePage() {
         };
         setItems((prev) => {
           const next = prev.map((item) => (item.id === bid ? botItem : item));
-          cachedItems = next;
+          setCacheValue(HOME_ITEMS_CACHE_KEY, next);
           return next;
         });
       } else {
@@ -237,7 +238,7 @@ export default function HomePage() {
               ? ({ ...item, type: "off-topic" } as BotChatItem)
               : item,
           );
-          cachedItems = next;
+          setCacheValue(HOME_ITEMS_CACHE_KEY, next);
           return next;
         });
       }
@@ -245,7 +246,7 @@ export default function HomePage() {
       // エラー時は pending bot アイテムを除去
       setItems((prev) => {
         const next = prev.filter((item) => item.id !== bid);
-        cachedItems = next;
+        setCacheValue(HOME_ITEMS_CACHE_KEY, next);
         return next;
       });
     } finally {

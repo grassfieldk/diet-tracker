@@ -3,6 +3,7 @@
 import { Button, Group, Modal, NumberInput, Stack } from "@mantine/core";
 import { useForm } from "@mantine/form";
 import { useEffect } from "react";
+import { toFiniteNumber } from "@/lib/client/number";
 import type { WeightRecord } from "@/types";
 
 interface WeightEditModalProps {
@@ -40,7 +41,7 @@ export function WeightEditModal({
       <form
         onSubmit={form.onSubmit((values) => {
           if (!record) return;
-          onSave(record.id, Number(values.weight));
+          onSave(record.id, toFiniteNumber(values.weight));
           onClose();
         })}
       >

@@ -4,13 +4,14 @@ import { Loader, ScrollArea, Stack, Text } from "@mantine/core";
 import { useEffect, useState } from "react";
 import { DayGroup } from "@/components/history/DayGroup";
 import { MealEditModal } from "@/components/history/MealEditModal";
-import type {
-  ExerciseAnalysis,
-  ExerciseRecord,
-  MealCategory,
-  MealRecord,
-  NutritionAnalysis,
-} from "@/types";
+import { getCacheValue, setCacheValue } from "@/lib/client/cache";
+import {
+  type ApiExerciseRecord,
+  type ApiMealRecord,
+  toExerciseRecord,
+  toMealRecord,
+} from "@/lib/client/mappers";
+import type { ExerciseRecord, MealRecord } from "@/types";
 
 function formatDateLabel(date: Date): string {
   const DOW = ["日", "月", "火", "水", "木", "金", "土"];
@@ -65,55 +66,31 @@ function groupByDate(
     });
 }
 
-interface ApiMealRecord {
-  id: string;
-  mealCategory: MealCategory;
-  rawText: string;
-  analysis: NutritionAnalysis;
-  recordedAt: string;
-}
-
-interface ApiExerciseRecord {
-  id: string;
-  rawText: string;
-  analysis: ExerciseAnalysis;
-  recordedAt: string;
-}
-
-function toMealRecord(r: ApiMealRecord): MealRecord {
-  return {
-    id: r.id,
-    mealCategory: r.mealCategory,
-    analysis: r.analysis,
-    recordedAt: new Date(r.recordedAt),
-  };
-}
-
-function toExerciseRecord(r: ApiExerciseRecord): ExerciseRecord {
-  return {
-    id: r.id,
-    rawText: r.rawText,
-    analysis: r.analysis,
-    recordedAt: new Date(r.recordedAt),
-  };
-}
-
 // モジュールレベルキャッシュ
-let cachedRecords: MealRecord[] | null = null;
-let cachedExercises: ExerciseRecord[] | null = null;
+const HISTORY_MEALS_CACHE_KEY = "history:meals";
+const HISTORY_EXERCISES_CACHE_KEY = "history:exercises";
 
 export default function HistoryPage() {
+  const cachedRecords = getCacheValue<MealRecord[]>(HISTORY_MEALS_CACHE_KEY);
+  const cachedExercises = getCacheValue<ExerciseRecord[]>(
+    HISTORY_EXERCISES_CACHE_KEY,
+  );
   const [records, setRecords] = useState<MealRecord[]>(cachedRecords ?? []);
   const [exercises, setExercises] = useState<ExerciseRecord[]>(
     cachedExercises ?? [],
   );
   const [loading, setLoading] = useState(
-    cachedRecords === null || cachedExercises === null,
+    cachedRecords === undefined || cachedExercises === undefined,
   );
   const [editing, setEditing] = useState<MealRecord | null>(null);
 
   useEffect(() => {
-    if (cachedRecords !== null && cachedExercises !== null) return;
+    const existingMeals = getCacheValue<MealRecord[]>(HISTORY_MEALS_CACHE_KEY);
+    const existingExercises = getCacheValue<ExerciseRecord[]>(
+      HISTORY_EXERCISES_CACHE_KEY,
+    );
+    if (existingMeals !== undefined && existingExercises !== undefined) return;
+
     Promise.all([
       fetch("/api/meals?days=7").then((r) => r.json()),
       fetch("/api/exercises?days=7").then((r) => r.json()),
@@ -122,8 +99,8 @@ export default function HistoryPage() {
         ([mealData, exerciseData]: [ApiMealRecord[], ApiExerciseRecord[]]) => {
           const convertedMeals = mealData.map(toMealRecord);
           const convertedExercises = exerciseData.map(toExerciseRecord);
-          cachedRecords = convertedMeals;
-          cachedExercises = convertedExercises;
+          setCacheValue(HISTORY_MEALS_CACHE_KEY, convertedMeals);
+          setCacheValue(HISTORY_EXERCISES_CACHE_KEY, convertedExercises);
           setRecords(convertedMeals);
           setExercises(convertedExercises);
           setLoading(false);
@@ -139,7 +116,7 @@ export default function HistoryPage() {
       await fetch(`/api/exercises/${id}`, { method: "DELETE" });
       setExercises((prev) => {
         const next = prev.filter((r) => r.id !== id);
-        cachedExercises = next;
+        setCacheValue(HISTORY_EXERCISES_CACHE_KEY, next);
         return next;
       });
     } catch {
@@ -152,7 +129,7 @@ export default function HistoryPage() {
       await fetch(`/api/meals/${id}`, { method: "DELETE" });
       setRecords((prev) => {
         const next = prev.filter((r) => r.id !== id);
-        cachedRecords = next;
+        setCacheValue(HISTORY_MEALS_CACHE_KEY, next);
         return next;
       });
     } catch {
@@ -178,7 +155,7 @@ export default function HistoryPage() {
       const updated: ApiMealRecord = await res.json();
       setRecords((prev) => {
         const next = prev.map((r) => (r.id === id ? toMealRecord(updated) : r));
-        cachedRecords = next;
+        setCacheValue(HISTORY_MEALS_CACHE_KEY, next);
         return next;
       });
     } catch {

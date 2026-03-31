@@ -3,6 +3,7 @@
 import { Button, Group, Modal, NumberInput, Stack } from "@mantine/core";
 import { useForm } from "@mantine/form";
 import { useEffect } from "react";
+import { toFiniteNumber } from "@/lib/client/number";
 import type { MealRecord } from "@/types";
 
 interface NutritionValues {
@@ -54,10 +55,10 @@ export function MealEditModal({ record, onClose, onSave }: MealEditModalProps) {
         onSubmit={form.onSubmit((values) => {
           if (!record) return;
           onSave(record.id, {
-            totalCalories: Number(values.totalCalories),
-            totalProtein: Number(values.totalProtein),
-            totalFat: Number(values.totalFat),
-            totalCarbs: Number(values.totalCarbs),
+            totalCalories: toFiniteNumber(values.totalCalories),
+            totalProtein: toFiniteNumber(values.totalProtein),
+            totalFat: toFiniteNumber(values.totalFat),
+            totalCarbs: toFiniteNumber(values.totalCarbs),
           });
           onClose();
         })}

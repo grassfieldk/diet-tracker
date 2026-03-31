@@ -1,4 +1,4 @@
-import { auth0 } from "@/lib/auth0";
+import { requireUserId } from "@/lib/api/request";
 import { prisma } from "@/lib/prisma";
 
 interface RouteParams {
@@ -6,11 +6,11 @@ interface RouteParams {
 }
 
 export async function DELETE(_request: Request, { params }: RouteParams) {
-  const session = await auth0.getSession();
-  if (!session) {
-    return Response.json({ error: "Unauthorized" }, { status: 401 });
+  const auth = await requireUserId();
+  if ("response" in auth) {
+    return auth.response;
   }
-  const userId = session.user.sub;
+  const { userId } = auth;
   const { id } = await params;
 
   try {
