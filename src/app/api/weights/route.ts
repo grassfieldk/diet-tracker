@@ -9,7 +9,14 @@ export async function GET(request: Request) {
   const userId = session.user.sub;
 
   const { searchParams } = new URL(request.url);
-  const days = Number(searchParams.get("days") ?? "30");
+  const daysParam = searchParams.get("days") ?? "30";
+  const days = Number.parseInt(daysParam, 10);
+  if (!Number.isInteger(days) || days <= 0 || days > 365) {
+    return Response.json(
+      { error: "days must be a positive integer up to 365" },
+      { status: 400 },
+    );
+  }
 
   const since = new Date();
   since.setDate(since.getDate() - days);
@@ -38,10 +45,23 @@ export async function POST(request: Request) {
   }
   const userId = session.user.sub;
 
-  const body = await request.json();
-  const { weight, recordedAt } = body;
+  let body: unknown;
+  try {
+    body = await request.json();
+  } catch {
+    return Response.json({ error: "Invalid JSON body" }, { status: 400 });
+  }
 
-  if (weight == null || typeof weight !== "number") {
+  const payload = body as { weight?: unknown; recordedAt?: unknown };
+  const { weight, recordedAt } = payload;
+
+  if (
+    weight == null ||
+    typeof weight !== "number" ||
+    !Number.isFinite(weight) ||
+    weight < 10 ||
+    weight > 500
+  ) {
     return Response.json({ error: "weight is required" }, { status: 400 });
   }
 
@@ -53,11 +73,15 @@ export async function POST(request: Request) {
   });
 
   // 指定日（未指定の場合は当日）の既存レコードがあれば上書き
-  const targetDate = recordedAt ? new Date(recordedAt) : new Date();
+  const targetDate = recordedAt ? new Date(String(recordedAt)) : new Date();
+  if (Number.isNaN(targetDate.getTime())) {
+    return Response.json({ error: "recordedAt is invalid" }, { status: 400 });
+  }
+
   const dayStart = new Date(targetDate);
-  dayStart.setHours(0, 0, 0, 0);
+  dayStart.setUTCHours(0, 0, 0, 0);
   const dayEnd = new Date(targetDate);
-  dayEnd.setHours(23, 59, 59, 999);
+  dayEnd.setUTCHours(23, 59, 59, 999);
 
   const existing = await prisma.weightRecord.findFirst({
     where: {

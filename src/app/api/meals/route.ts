@@ -13,23 +13,48 @@ export async function GET(request: Request) {
   const date = searchParams.get("date"); // YYYY-MM-DD
   const limit = searchParams.get("limit"); // 件数制限
 
+  const parsedLimit = limit ? Number.parseInt(limit, 10) : null;
+  if (limit && (!Number.isInteger(parsedLimit) || parsedLimit <= 0)) {
+    return Response.json(
+      { error: "limit must be a positive integer" },
+      { status: 400 },
+    );
+  }
+
+  let startDate: Date | null = null;
+  let endDate: Date | null = null;
+  if (date) {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+      return Response.json(
+        { error: "date must be YYYY-MM-DD" },
+        { status: 400 },
+      );
+    }
+    startDate = new Date(`${date}T00:00:00.000Z`);
+    if (Number.isNaN(startDate.getTime())) {
+      return Response.json({ error: "date is invalid" }, { status: 400 });
+    }
+    endDate = new Date(startDate);
+    endDate.setUTCDate(endDate.getUTCDate() + 1);
+  }
+
   const records = await prisma.mealRecord.findMany({
     where: {
       userId,
-      ...(date
+      ...(startDate && endDate
         ? {
             recordedDate: {
-              gte: new Date(`${date}T00:00:00.000Z`),
-              lt: new Date(`${date}T24:00:00.000Z`),
+              gte: startDate,
+              lt: endDate,
             },
           }
         : {}),
     },
-    orderBy: { recordedDate: limit ? "desc" : "asc" },
-    ...(limit ? { take: Number(limit) } : {}),
+    orderBy: { recordedDate: parsedLimit ? "desc" : "asc" },
+    ...(parsedLimit ? { take: parsedLimit } : {}),
   });
 
-  const sorted = limit ? [...records].reverse() : records;
+  const sorted = parsedLimit ? [...records].reverse() : records;
 
   return Response.json(
     sorted.map((r) => ({
@@ -53,14 +78,68 @@ export async function POST(request: Request) {
   }
   const userId = session.user.sub;
 
-  const body = await request.json();
-  const { mealCategory, analysis, rawText, recordedDate } = body;
+  let body: unknown;
+  try {
+    body = await request.json();
+  } catch {
+    return Response.json({ error: "Invalid JSON body" }, { status: 400 });
+  }
+  const payload = body as {
+    mealCategory?: unknown;
+    analysis?: unknown;
+    rawText?: unknown;
+    recordedDate?: unknown;
+  };
+  const { mealCategory, analysis, rawText, recordedDate } = payload;
 
-  if (!mealCategory || !analysis) {
+  if (!mealCategory || !analysis || typeof analysis !== "object") {
     return Response.json(
       { error: "mealCategory and analysis are required" },
       { status: 400 },
     );
+  }
+
+  if (!["朝食", "昼食", "夕食", "間食"].includes(String(mealCategory))) {
+    return Response.json({ error: "mealCategory is invalid" }, { status: 400 });
+  }
+
+  const nutrition = analysis as {
+    totalCalories?: unknown;
+    totalProtein?: unknown;
+    totalFat?: unknown;
+    totalCarbs?: unknown;
+  };
+  const totals = [
+    nutrition.totalCalories,
+    nutrition.totalProtein,
+    nutrition.totalFat,
+    nutrition.totalCarbs,
+  ];
+  if (
+    totals.some(
+      (value) =>
+        typeof value !== "number" || !Number.isFinite(value) || value < 0,
+    )
+  ) {
+    return Response.json(
+      { error: "analysis totals must be finite numbers" },
+      { status: 400 },
+    );
+  }
+  const [totalCalories, totalProtein, totalFat, totalCarbs] =
+    totals as number[];
+
+  let parsedRecordedDate: Date;
+  if (recordedDate == null) {
+    parsedRecordedDate = new Date();
+  } else {
+    parsedRecordedDate = new Date(String(recordedDate));
+    if (Number.isNaN(parsedRecordedDate.getTime())) {
+      return Response.json(
+        { error: "recordedDate is invalid" },
+        { status: 400 },
+      );
+    }
   }
 
   // User が存在しない場合は作成
@@ -74,13 +153,13 @@ export async function POST(request: Request) {
     data: {
       userId,
       mealCategory,
-      rawText: rawText ?? null,
+      rawText: typeof rawText === "string" ? rawText : null,
       analysisJson: analysis,
-      totalCalories: analysis.totalCalories,
-      totalProtein: analysis.totalProtein,
-      totalFat: analysis.totalFat,
-      totalCarbs: analysis.totalCarbs,
-      recordedDate: recordedDate ? new Date(recordedDate) : new Date(),
+      totalCalories,
+      totalProtein,
+      totalFat,
+      totalCarbs,
+      recordedDate: parsedRecordedDate,
     },
   });
 

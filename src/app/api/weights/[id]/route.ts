@@ -13,10 +13,21 @@ export async function PUT(request: Request, { params }: RouteParams) {
   const userId = session.user.sub;
   const { id } = await params;
 
-  const body = await request.json();
-  const { weight } = body;
+  let body: unknown;
+  try {
+    body = await request.json();
+  } catch {
+    return Response.json({ error: "Invalid JSON body" }, { status: 400 });
+  }
+  const { weight } = body as { weight?: unknown };
 
-  if (weight == null || typeof weight !== "number") {
+  if (
+    weight == null ||
+    typeof weight !== "number" ||
+    !Number.isFinite(weight) ||
+    weight < 10 ||
+    weight > 500
+  ) {
     return Response.json({ error: "weight is required" }, { status: 400 });
   }
 

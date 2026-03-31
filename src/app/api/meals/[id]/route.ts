@@ -14,10 +14,46 @@ export async function PUT(request: Request, { params }: RouteParams) {
   const userId = session.user.sub;
   const { id } = await params;
 
-  const body = await request.json();
-  const { totalCalories, totalProtein, totalFat, totalCarbs } = body;
+  let body: unknown;
+  try {
+    body = await request.json();
+  } catch {
+    return Response.json({ error: "Invalid JSON body" }, { status: 400 });
+  }
+  const { totalCalories, totalProtein, totalFat, totalCarbs } = body as {
+    totalCalories?: unknown;
+    totalProtein?: unknown;
+    totalFat?: unknown;
+    totalCarbs?: unknown;
+  };
+
+  const totals = [totalCalories, totalProtein, totalFat, totalCarbs];
+  if (
+    totals.some(
+      (value) =>
+        typeof value !== "number" || !Number.isFinite(value) || value < 0,
+    )
+  ) {
+    return Response.json(
+      { error: "nutrition totals are invalid" },
+      { status: 400 },
+    );
+  }
 
   try {
+    const existing = await prisma.mealRecord.findUnique({
+      where: { id, userId },
+    });
+    if (!existing) {
+      return Response.json({ error: "Not found" }, { status: 404 });
+    }
+
+    const baseAnalysis =
+      typeof existing.analysisJson === "object" &&
+      existing.analysisJson !== null
+        ? (existing.analysisJson as object)
+        : {};
+
     const record = await prisma.mealRecord.update({
       where: { id, userId },
       data: {
@@ -26,8 +62,7 @@ export async function PUT(request: Request, { params }: RouteParams) {
         totalFat,
         totalCarbs,
         analysisJson: {
-          ...((await prisma.mealRecord.findUnique({ where: { id, userId } }))
-            ?.analysisJson as object),
+          ...baseAnalysis,
           totalCalories,
           totalProtein,
           totalFat,
