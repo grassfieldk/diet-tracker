@@ -22,27 +22,27 @@ export const ACTIVITY_LEVELS: {
 }[] = [
   {
     value: "sedentary",
-    label: "通勤、デスクワーク程度",
+    label: "ほとんどしない",
     multiplier: 1.2,
   },
   {
     value: "light",
-    label: "週に 1-2 回",
+    label: "週に 1、2 回",
     multiplier: 1.375,
   },
   {
     value: "moderate",
-    label: "週に3回〜5回程度の運動",
+    label: "2 日に 1 回程度",
     multiplier: 1.55,
   },
   {
     value: "active",
-    label: "激しい運動。週に6回〜7回程度の運動",
+    label: "ほぼ毎日",
     multiplier: 1.725,
   },
   {
     value: "very_active",
-    label: "非常に激しい運動。一日に2回程度の運動",
+    label: "毎日 2 回以上",
     multiplier: 1.9,
   },
 ];
