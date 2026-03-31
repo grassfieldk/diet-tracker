@@ -3,12 +3,31 @@
 import { Button, Group, NumberInput } from "@mantine/core";
 import { DatePickerInput } from "@mantine/dates";
 import { useForm } from "@mantine/form";
+import dynamic from "next/dynamic";
 import { useEffect, useState } from "react";
 import { PageLayout } from "@/components/layout/PageLayout";
 import { WeightEditModal } from "@/components/weight/WeightEditModal";
-import { WeightGraph } from "@/components/weight/WeightGraph";
 import { WeightList } from "@/components/weight/WeightList";
 import type { WeightRecord } from "@/types";
+
+const GRAPH_FRAME_HEIGHT = 286;
+
+const AsyncWeightGraph = dynamic(
+  () => import("@/components/weight/WeightGraph").then((m) => m.WeightGraph),
+  {
+    ssr: false,
+    loading: () => (
+      <div
+        style={{
+          minHeight: GRAPH_FRAME_HEIGHT,
+          border: "1px solid var(--mantine-color-default-border)",
+          borderRadius: "var(--mantine-radius-md)",
+          padding: "var(--mantine-spacing-md)",
+        }}
+      />
+    ),
+  },
+);
 
 interface ApiWeightRecord {
   id: string;
@@ -196,11 +215,13 @@ export default function WeightPage() {
     <>
       <PageLayout
         top={
-          <WeightGraph
-            records={records}
-            onRangeChange={setDays}
-            loading={loading}
-          />
+          <div style={{ minHeight: GRAPH_FRAME_HEIGHT }}>
+            <AsyncWeightGraph
+              records={records}
+              onRangeChange={setDays}
+              loading={loading}
+            />
+          </div>
         }
         bottom={inputArea}
       >

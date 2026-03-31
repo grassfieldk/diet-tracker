@@ -9,6 +9,35 @@ export async function GET(request: Request) {
   const userId = session.user.sub;
 
   const { searchParams } = new URL(request.url);
+  const latestParam = searchParams.get("latest");
+
+  const parsedLatest = latestParam ? Number.parseInt(latestParam, 10) : null;
+  if (
+    latestParam &&
+    (!Number.isInteger(parsedLatest) || parsedLatest <= 0 || parsedLatest > 50)
+  ) {
+    return Response.json(
+      { error: "latest must be a positive integer up to 50" },
+      { status: 400 },
+    );
+  }
+
+  if (parsedLatest) {
+    const latestRecords = await prisma.weightRecord.findMany({
+      where: { userId },
+      orderBy: { recordedAt: "desc" },
+      take: parsedLatest,
+    });
+
+    return Response.json(
+      latestRecords.map((r) => ({
+        id: r.id,
+        weight: r.weight,
+        recordedAt: r.recordedAt,
+      })),
+    );
+  }
+
   const daysParam = searchParams.get("days") ?? "30";
   const days = Number.parseInt(daysParam, 10);
   if (!Number.isInteger(days) || days <= 0 || days > 365) {

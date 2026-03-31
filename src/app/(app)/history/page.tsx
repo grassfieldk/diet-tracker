@@ -115,8 +115,8 @@ export default function HistoryPage() {
   useEffect(() => {
     if (cachedRecords !== null && cachedExercises !== null) return;
     Promise.all([
-      fetch("/api/meals").then((r) => r.json()),
-      fetch("/api/exercises").then((r) => r.json()),
+      fetch("/api/meals?days=7").then((r) => r.json()),
+      fetch("/api/exercises?days=7").then((r) => r.json()),
     ])
       .then(
         ([mealData, exerciseData]: [ApiMealRecord[], ApiExerciseRecord[]]) => {

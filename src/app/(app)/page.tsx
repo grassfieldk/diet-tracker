@@ -19,7 +19,7 @@ import type {
   UserProfile,
 } from "@/types";
 
-const INITIAL_LOAD_LIMIT = 20;
+const INITIAL_LOAD_DAYS = 3;
 
 // モジュールレベルキャッシュ（タブ切り替えで破棄されない）
 let cachedItems: ChatItem[] | null = null;
@@ -51,8 +51,8 @@ export default function HomePage() {
     }
 
     Promise.all([
-      fetch(`/api/meals?limit=${INITIAL_LOAD_LIMIT}`).then((r) => r.json()),
-      fetch(`/api/exercises?date=${todayString()}`).then((r) => r.json()),
+      fetch(`/api/meals?days=${INITIAL_LOAD_DAYS}`).then((r) => r.json()),
+      fetch(`/api/exercises?days=${INITIAL_LOAD_DAYS}`).then((r) => r.json()),
     ])
       .then(
         ([mealData, exerciseData]: [

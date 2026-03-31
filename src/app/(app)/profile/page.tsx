@@ -167,10 +167,10 @@ export default function ProfilePage() {
     }
 
     if (cachedLatestWeight === undefined) {
-      fetch("/api/weights?days=3650")
+      fetch("/api/weights?latest=1")
         .then((r) => r.json())
         .then((data: { weight: number; recordedAt: string }[]) => {
-          const w = data.length > 0 ? data[data.length - 1].weight : null;
+          const w = data.length > 0 ? data[0].weight : null;
           cachedLatestWeight = w;
           setLatestWeight(w);
         })

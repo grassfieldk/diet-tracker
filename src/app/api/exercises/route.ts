@@ -12,11 +12,30 @@ export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const date = searchParams.get("date"); // YYYY-MM-DD
   const limit = searchParams.get("limit");
+  const daysParam = searchParams.get("days");
+
+  if (date && daysParam) {
+    return Response.json(
+      { error: "date and days cannot be used together" },
+      { status: 400 },
+    );
+  }
 
   const parsedLimit = limit ? Number.parseInt(limit, 10) : null;
   if (limit && (!Number.isInteger(parsedLimit) || parsedLimit <= 0)) {
     return Response.json(
       { error: "limit must be a positive integer" },
+      { status: 400 },
+    );
+  }
+
+  const parsedDays = daysParam ? Number.parseInt(daysParam, 10) : null;
+  if (
+    daysParam &&
+    (!Number.isInteger(parsedDays) || parsedDays <= 0 || parsedDays > 3650)
+  ) {
+    return Response.json(
+      { error: "days must be a positive integer up to 3650" },
       { status: 400 },
     );
   }
@@ -38,6 +57,13 @@ export async function GET(request: Request) {
     endDate.setUTCDate(endDate.getUTCDate() + 1);
   }
 
+  let sinceDate: Date | null = null;
+  if (parsedDays) {
+    sinceDate = new Date();
+    sinceDate.setUTCHours(0, 0, 0, 0);
+    sinceDate.setUTCDate(sinceDate.getUTCDate() - (parsedDays - 1));
+  }
+
   const records = await prisma.exerciseRecord.findMany({
     where: {
       userId,
@@ -46,6 +72,13 @@ export async function GET(request: Request) {
             recordedDate: {
               gte: startDate,
               lt: endDate,
+            },
+          }
+        : {}),
+      ...(sinceDate
+        ? {
+            recordedDate: {
+              gte: sinceDate,
             },
           }
         : {}),
