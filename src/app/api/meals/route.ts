@@ -113,7 +113,7 @@ export async function POST(request: Request) {
   const record = await prisma.mealRecord.create({
     data: {
       userId,
-      mealCategory,
+      mealCategory: String(mealCategory),
       rawText: typeof rawText === "string" ? rawText : null,
       analysisJson: analysis,
       totalCalories,

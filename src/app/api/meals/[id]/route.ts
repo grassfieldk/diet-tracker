@@ -55,16 +55,16 @@ export async function PUT(request: Request, { params }: RouteParams) {
     const record = await prisma.mealRecord.update({
       where: { id, userId },
       data: {
-        totalCalories,
-        totalProtein,
-        totalFat,
-        totalCarbs,
+        totalCalories: totalCalories as number,
+        totalProtein: totalProtein as number,
+        totalFat: totalFat as number,
+        totalCarbs: totalCarbs as number,
         analysisJson: {
           ...baseAnalysis,
-          totalCalories,
-          totalProtein,
-          totalFat,
-          totalCarbs,
+          totalCalories: totalCalories as number,
+          totalProtein: totalProtein as number,
+          totalFat: totalFat as number,
+          totalCarbs: totalCarbs as number,
         },
       },
     });

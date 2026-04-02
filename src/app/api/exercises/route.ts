@@ -1,3 +1,4 @@
+import type { InputJsonValue } from "@prisma/client/runtime/library";
 import {
   buildRecordedDateFilter,
   parseDateDaysLimitQuery,
@@ -90,7 +91,7 @@ export async function POST(request: Request) {
     data: {
       userId,
       rawText: typeof rawText === "string" ? rawText : null,
-      analysisJson: analysis,
+      analysisJson: analysis as InputJsonValue,
       totalCaloriesBurned: analysis.totalCaloriesBurned,
       recordedDate: parsedRecordedDate,
     },
